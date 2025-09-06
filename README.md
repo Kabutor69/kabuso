@@ -1,36 +1,180 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kabuso - Free Music Streaming Platform
 
-## Getting Started
+A modern, free music streaming platform built with Next.js and ytdl-core. Stream millions of songs from YouTube Music without any subscriptions or ads.
 
-First, run the development server:
+## ✨ Features
 
+- 🎵 **Free Music Streaming** - Stream any song from YouTube Music
+- 🔍 **Advanced Search** - Find songs, artists, and albums instantly
+- 🔥 **Trending Music** - Discover what's popular right now
+- ❤️ **Favorites System** - Save your favorite songs locally
+- 🎧 **High-Quality Audio** - Stream in the best available quality
+- 📱 **Responsive Design** - Works perfectly on desktop and mobile
+- 🎛️ **Advanced Player** - Full-featured music player with queue management
+- 🔄 **Playback Modes** - Normal, repeat, repeat-one, and shuffle
+- 📊 **Queue Management** - Add, remove, and reorder songs
+- 🎨 **Modern UI** - Beautiful dark theme with smooth animations
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18.17.0 or higher
+- npm 9.0.0 or higher
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd kabuso-new
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Run the development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Learn More
+## 🛠️ Built With
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js 15** - React framework for production
+- **TypeScript** - Type-safe JavaScript
+- **Tailwind CSS** - Utility-first CSS framework
+- **ytdl-core** - YouTube video/audio downloader
+- **youtube-sr** - YouTube search library
+- **Lucide React** - Beautiful icons
+- **React Context** - State management
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+kabuso-new/
+├── src/
+│   ├── app/                 # Next.js app directory
+│   │   ├── api/            # API routes
+│   │   │   ├── search/     # Search endpoint
+│   │   │   ├── trending/   # Trending songs
+│   │   │   ├── stream/     # Audio streaming
+│   │   │   └── related/    # Related tracks
+│   │   ├── favorites/      # Favorites page
+│   │   ├── search/         # Search page
+│   │   └── page.tsx        # Homepage
+│   ├── components/         # React components
+│   │   ├── Navbar.tsx      # Navigation bar
+│   │   └── Playbar.tsx     # Music player
+│   ├── context/            # React contexts
+│   │   ├── AudioContext.tsx    # Audio state management
+│   │   └── FavoritesContext.tsx # Favorites management
+│   └── app/                # App configuration
+├── public/                 # Static assets
+└── package.json           # Dependencies
+```
 
-## Deploy on Vercel
+## 🎯 API Endpoints
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `GET /api/search?q={query}` - Search for songs
+- `GET /api/trending` - Get trending songs
+- `GET /api/stream/{id}` - Stream audio for a video ID
+- `GET /api/related/{id}` - Get related tracks
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎨 Features Overview
+
+### Homepage
+- Trending music discovery
+- Beautiful hero section
+- Quick action cards
+- Responsive grid layout
+
+### Search
+- Real-time search with debouncing
+- Search history
+- Advanced filtering
+- Play all results
+
+### Favorites
+- Local storage persistence
+- Add/remove favorites
+- Play all favorites
+- Visual feedback
+
+### Music Player
+- Full-featured audio controls
+- Queue management
+- Volume control
+- Progress seeking
+- Playback modes (normal, repeat, shuffle)
+
+## 🔧 Configuration
+
+The app uses environment variables for configuration. Create a `.env.local` file:
+
+```env
+# Optional: Custom API configurations
+NEXT_PUBLIC_APP_NAME=Kabuso
+NEXT_PUBLIC_APP_DESCRIPTION=Free Music Streaming
+```
+
+## 📱 Mobile Support
+
+Kabuso is fully responsive and optimized for mobile devices:
+- Touch-friendly controls
+- Mobile-optimized player
+- Responsive navigation
+- Swipe gestures support
+
+## 🎵 How It Works
+
+1. **Search**: Uses youtube-sr to search YouTube for music
+2. **Streaming**: ytdl-core extracts and streams audio directly
+3. **Caching**: Trending results are cached for better performance
+4. **Storage**: Favorites and settings are stored locally
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Deploy with zero configuration
+
+### Other Platforms
+
+The app can be deployed to any platform that supports Next.js:
+- Netlify
+- Railway
+- DigitalOcean App Platform
+- AWS Amplify
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## ⚠️ Disclaimer
+
+This application is for educational purposes only. Please respect YouTube's Terms of Service and copyright laws. The developers are not responsible for any misuse of this software.
+
+## 🙏 Acknowledgments
+
+- YouTube Music for the vast music library
+- ytdl-core developers for the excellent library
+- Next.js team for the amazing framework
+- All contributors and users
+
+---
+
+**Made with ❤️ by the Kabutor**
