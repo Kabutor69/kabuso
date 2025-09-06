@@ -111,16 +111,6 @@ kabuso-new/
 - Progress seeking
 - Playback modes (normal, repeat, shuffle)
 
-## 🔧 Configuration
-
-The app uses environment variables for configuration. Create a `.env.local` file:
-
-```env
-# Optional: Custom API configurations
-NEXT_PUBLIC_APP_NAME=Kabuso
-NEXT_PUBLIC_APP_DESCRIPTION=Free Music Streaming
-```
-
 ## 📱 Mobile Support
 
 Kabuso is fully responsive and optimized for mobile devices:
@@ -143,26 +133,6 @@ Kabuso is fully responsive and optimized for mobile devices:
 1. Push your code to GitHub
 2. Connect your repository to Vercel
 3. Deploy with zero configuration
-
-### Other Platforms
-
-The app can be deployed to any platform that supports Next.js:
-- Netlify
-- Railway
-- DigitalOcean App Platform
-- AWS Amplify
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
 
 ## ⚠️ Disclaimer
 
