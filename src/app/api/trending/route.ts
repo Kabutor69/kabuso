@@ -4,7 +4,24 @@ import { YouTube } from "youtube-sr";
 export const runtime = "nodejs";
 
 // Cache trending results for 30 minutes
-let cachedTrending: any[] = [];
+type YouTubeVideo = {
+  id?: string;
+  title?: string;
+  channel?: { name?: string };
+  thumbnail?: { url?: string };
+  duration?: number | { seconds?: number };
+  views?: number;
+  uploadedAt?: string;
+};
+let cachedTrending: Array<{
+  videoId: string;
+  title: string;
+  artists: string;
+  thumbnail: string;
+  duration: number;
+  views?: number;
+  uploadedAt?: string;
+}> = [];
 let lastTrendingFetch = 0;
 const TRENDING_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
@@ -27,7 +44,7 @@ export async function GET(req: NextRequest) {
       "new releases"
     ];
 
-    let allResults: any[] = [];
+    let allResults: YouTubeVideo[] = [];
     
     for (const searchTerm of searches) {
       try {
@@ -44,8 +61,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Remove duplicates and filter valid tracks
-    const uniqueTracks = new Map();
-    allResults.forEach(video => {
+    const uniqueTracks = new Map<string, YouTubeVideo>();
+    allResults.forEach((video) => {
       if (video?.id && 
           /^[a-zA-Z0-9-_]{11}$/.test(video.id) && 
           !uniqueTracks.has(video.id)) {
@@ -53,14 +70,16 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const songs = Array.from(uniqueTracks.values())
+    const songs = (Array.from(uniqueTracks.values()) as YouTubeVideo[])
       .slice(0, 24) // Top 24 trending
-      .map((video: any) => ({
-        videoId: video.id,
-        title: video.title,
+      .map((video) => ({
+        videoId: (video.id as string),
+        title: (video.title as string) || "",
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
-        duration: video.duration?.seconds || 0,
+        duration: typeof video.duration === 'number' 
+          ? video.duration 
+          : (video.duration?.seconds || 0),
         views: video.views,
         uploadedAt: video.uploadedAt,
       }));

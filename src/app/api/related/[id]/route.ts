@@ -46,18 +46,27 @@ export async function GET(
     }
 
     // Filter out the current video and format results
-    const relatedSongs = results
-      .filter((video: any) => 
-        video && 
-        video.id && 
+    type YouTubeVideo = {
+      id?: string;
+      title?: string;
+      channel?: { name?: string };
+      thumbnail?: { url?: string };
+      duration?: { seconds?: number };
+      views?: number;
+      uploadedAt?: string;
+    };
+    const relatedSongs = (results as YouTubeVideo[])
+      .filter((video) => 
+        Boolean(video) &&
+        Boolean(video.id) && 
         video.id !== videoId &&
-        /^[a-zA-Z0-9-_]{11}$/.test(video.id) &&
-        video.title
+        /^[a-zA-Z0-9-_]{11}$/.test(video.id as string) &&
+        Boolean(video.title)
       )
       .slice(0, 5) // Return top 5 related
-      .map((video: any) => ({
-        videoId: video.id,
-        title: video.title,
+      .map((video) => ({
+        videoId: video.id as string,
+        title: (video.title as string) || "",
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
         duration: video.duration?.seconds || 0,

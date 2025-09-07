@@ -33,16 +33,25 @@ export async function GET(req: NextRequest) {
     }
 
     // Filter and format results
-    const songs = results
-      .filter((video: any) => 
-        video && 
-        video.id && 
-        /^[a-zA-Z0-9-_]{11}$/.test(video.id) &&
-        video.title
+    type YouTubeVideo = {
+      id?: string;
+      title?: string;
+      channel?: { name?: string };
+      thumbnail?: { url?: string };
+      duration?: { seconds?: number };
+      views?: number;
+      uploadedAt?: string;
+    };
+    const songs = (results as YouTubeVideo[])
+      .filter((video) => 
+        Boolean(video) && 
+        Boolean(video.id) && 
+        /^[a-zA-Z0-9-_]{11}$/.test(video.id as string) &&
+        Boolean(video.title)
       )
-      .map((video: any) => ({
-        videoId: video.id,
-        title: video.title,
+      .map((video) => ({
+        videoId: video.id as string,
+        title: (video.title as string) || "",
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
         duration: video.duration?.seconds || 0,

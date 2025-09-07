@@ -104,7 +104,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
 
   const playTrack = useCallback((track: Track, addToQueue = true, playNow = true) => {
     setState(prev => {
-      let newQueue = [...prev.queue];
+      const newQueue = [...prev.queue];
       let newIndex = prev.currentIndex;
 
       if (addToQueue) {
