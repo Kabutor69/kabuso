@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import ytdl from "@distube/ytdl-core";
+import { Readable } from "stream";
 
 export const runtime = "nodejs";
 
@@ -38,16 +39,17 @@ export async function GET(
       );
     }
 
-    // Create a readable stream
-    const stream = ytdl(videoId, {
+    // Create a readable stream (Node.js Readable)
+    const nodeStream = ytdl(videoId, {
       format: bestAudio,
       quality: 'highestaudio',
       filter: 'audioonly',
     });
 
     // Set appropriate headers for streaming
+    const contentType = bestAudio.mimeType?.split(";")[0] || 'application/octet-stream';
     const headers = new Headers({
-      'Content-Type': 'audio/mpeg',
+      'Content-Type': contentType,
       'Accept-Ranges': 'bytes',
       'Cache-Control': 'public, max-age=3600',
     });
@@ -56,11 +58,13 @@ export async function GET(
     const range = req.headers.get('range');
     if (range) {
       headers.set('Accept-Ranges', 'bytes');
-      headers.set('Content-Range', range);
     }
 
-    return new NextResponse(stream as unknown as ReadableStream<Uint8Array>, {
-      status: 206,
+    // Convert Node stream to Web ReadableStream for NextResponse
+    const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream<Uint8Array>;
+
+    return new NextResponse(webStream, {
+      status: 200,
       headers,
     });
 
