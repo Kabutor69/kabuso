@@ -30,75 +30,83 @@ export async function GET(
       },
     } as const;
 
-    // Check if video exists and get info
-    const info = await ytdl.getInfo(videoId, { requestOptions });
-    
-    if (!info || !info.videoDetails) {
-      return NextResponse.json(
-        { error: "Video not found" }, 
-        { status: 404 }
-      );
-    }
+    // 1) Try Piped API (privacy-friendly YouTube proxy) to avoid bot checks
+    const pipedInstances = [
+      process.env.PIPED_INSTANCE?.replace(/\/$/, '') || 'https://piped.video',
+      'https://pipedapi.kavin.rocks',
+      'https://piped.video',
+    ];
 
-    // Get the best audio format with broad browser support (prefer MP4/MPEG)
-    const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
-    const preferred =
-      audioFormats.find((f) => f.mimeType?.includes('audio/mp4')) ||
-      audioFormats.find((f) => f.mimeType?.includes('audio/mpeg'));
-    const bestAudio = preferred || ytdl.chooseFormat(audioFormats, { quality: 'highestaudio' });
+    for (const base of pipedInstances) {
+      try {
+        const infoRes = await fetch(`${base}/streams/${videoId}`, {
+          headers: requestOptions.headers,
+          next: { revalidate: 0 },
+        });
+        if (!infoRes.ok) throw new Error(`Piped info ${infoRes.status}`);
+        const infoJson = await infoRes.json();
+        const audioStreams: Array<{ url: string; mimeType?: string; bitrate?: number; codec?: string }>
+          = infoJson?.audioStreams || [];
+        if (audioStreams.length > 0) {
+          // Prefer mp4/m4a
+          const preferred =
+            audioStreams.find(s => (s.mimeType || '').includes('audio/mp4')) ||
+            audioStreams.find(s => (s.codec || '').includes('mp4a')) ||
+            audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
 
-    if (!bestAudio) {
-      return NextResponse.json(
-        { error: "No audio format available" }, 
-        { status: 400 }
-      );
-    }
+          if (preferred?.url) {
+            const upstreamHeaders: Record<string, string> = {
+              'user-agent': requestOptions.headers['user-agent'],
+              'accept-language': requestOptions.headers['accept-language'],
+            };
+            const clientRange = req.headers.get('range');
+            if (clientRange) upstreamHeaders['range'] = clientRange;
 
-    // Range/seek support
-    const getContentLength = (format: unknown): number | undefined => {
-      if (format && typeof format === 'object' && 'contentLength' in (format as Record<string, unknown>)) {
-        const raw = (format as { contentLength?: string }).contentLength;
-        const parsed = raw ? parseInt(raw, 10) : NaN;
-        return Number.isFinite(parsed) ? parsed : undefined;
-      }
-      return undefined;
-    };
-    const totalSize = getContentLength(bestAudio);
-    const rangeHeader = req.headers.get('range');
-    let statusCode = 200;
-    let startByte = 0;
-    let endByte: number | undefined = totalSize ? totalSize - 1 : undefined;
-    if (rangeHeader && totalSize) {
-      const match = /bytes=(\d+)-(\d+)?/.exec(rangeHeader);
-      if (match) {
-        startByte = parseInt(match[1], 10);
-        if (match[2]) {
-          endByte = Math.min(parseInt(match[2], 10), totalSize - 1);
-        } else {
-          endByte = totalSize - 1;
+            const upstream = await fetch(preferred.url, {
+              headers: upstreamHeaders,
+              redirect: 'follow',
+            });
+
+            const contentType = upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg';
+            const headers = new Headers({
+              'Content-Type': contentType,
+              'Cache-Control': 'no-store',
+              'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
+              'X-Content-Type-Options': 'nosniff',
+              'Content-Disposition': 'inline',
+            });
+            const cr = upstream.headers.get('content-range');
+            if (cr) headers.set('Content-Range', cr);
+            const cl = upstream.headers.get('content-length');
+            if (cl) headers.set('Content-Length', cl);
+
+            return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
+              status: upstream.status,
+              headers,
+            });
+          }
         }
-        if (startByte > (endByte as number)) startByte = 0;
-        statusCode = 206;
+      } catch {
+        // try next instance
       }
     }
 
-    // Instead of piping ytdl stream (can be blocked on serverless), fetch the direct media URL
-    const upstreamHeaders: Record<string, string> = {
-      'user-agent': requestOptions.headers['user-agent'],
-      'accept-language': requestOptions.headers['accept-language'],
-    };
-    const clientRange = req.headers.get('range');
-    if (clientRange) upstreamHeaders['range'] = clientRange;
-
-    const upstream = await fetch(bestAudio.url!, {
-      headers: upstreamHeaders,
+    // 2) Fallback to ytdl (may hit bot checks in some regions)
+    const info = await ytdl.getInfo(videoId, { requestOptions });
+    if (!info || !info.videoDetails) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+    }
+    const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
+    const preferred = audioFormats.find(f => f.mimeType?.includes('audio/mp4')) || audioFormats[0];
+    if (!preferred?.url) {
+      return NextResponse.json({ error: 'No audio format available' }, { status: 400 });
+    }
+    const upstream = await fetch(preferred.url, {
+      headers: requestOptions.headers,
       redirect: 'follow',
     });
-
-    // Prepare response headers from upstream
-    const contentType = upstream.headers.get('content-type') || bestAudio.mimeType?.split(';')[0] || 'audio/mpeg';
     const headers = new Headers({
-      'Content-Type': contentType,
+      'Content-Type': upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg',
       'Cache-Control': 'no-store',
       'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
       'X-Content-Type-Options': 'nosniff',
@@ -108,7 +116,6 @@ export async function GET(
     if (cr) headers.set('Content-Range', cr);
     const cl = upstream.headers.get('content-length');
     if (cl) headers.set('Content-Length', cl);
-
     return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
       status: upstream.status,
       headers,
