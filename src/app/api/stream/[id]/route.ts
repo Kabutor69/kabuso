@@ -54,7 +54,15 @@ export async function GET(
     }
 
     // Range/seek support
-    const totalSize = parseInt((bestAudio as any).contentLength || '0', 10) || undefined;
+    const getContentLength = (format: unknown): number | undefined => {
+      if (format && typeof format === 'object' && 'contentLength' in (format as Record<string, unknown>)) {
+        const raw = (format as { contentLength?: string }).contentLength;
+        const parsed = raw ? parseInt(raw, 10) : NaN;
+        return Number.isFinite(parsed) ? parsed : undefined;
+      }
+      return undefined;
+    };
+    const totalSize = getContentLength(bestAudio);
     const rangeHeader = req.headers.get('range');
     let statusCode = 200;
     let startByte = 0;
