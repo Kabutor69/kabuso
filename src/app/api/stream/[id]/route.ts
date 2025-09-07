@@ -3,6 +3,8 @@ import ytdl from "@distube/ytdl-core";
 import { Readable } from "stream";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export async function GET(
   req: NextRequest,
@@ -28,9 +30,12 @@ export async function GET(
       );
     }
 
-    // Get the best audio format
+    // Get the best audio format with broad browser support (prefer MP4/MPEG)
     const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
-    const bestAudio = ytdl.chooseFormat(audioFormats, { quality: 'highestaudio' });
+    const preferred =
+      audioFormats.find((f) => f.mimeType?.includes('audio/mp4')) ||
+      audioFormats.find((f) => f.mimeType?.includes('audio/mpeg'));
+    const bestAudio = preferred || ytdl.chooseFormat(audioFormats, { quality: 'highestaudio' });
 
     if (!bestAudio) {
       return NextResponse.json(
@@ -47,7 +52,7 @@ export async function GET(
     });
 
     // Set appropriate headers for streaming
-    const contentType = bestAudio.mimeType?.split(";")[0] || 'application/octet-stream';
+    const contentType = bestAudio.mimeType?.split(";")[0] || 'audio/mpeg';
     const headers = new Headers({
       'Content-Type': contentType,
       'Accept-Ranges': 'bytes',
