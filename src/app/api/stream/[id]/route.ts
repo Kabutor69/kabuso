@@ -20,8 +20,17 @@ export async function GET(
   }
 
   try {
+    // Common headers to improve success rate from cloud hosts
+    const requestOptions = {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'accept-language': 'en-US,en;q=0.9',
+      },
+    } as const;
+
     // Check if video exists and get info
-    const info = await ytdl.getInfo(videoId);
+    const info = await ytdl.getInfo(videoId, { requestOptions });
     
     if (!info || !info.videoDetails) {
       return NextResponse.json(
@@ -49,6 +58,7 @@ export async function GET(
       format: bestAudio,
       quality: 'highestaudio',
       filter: 'audioonly',
+      requestOptions,
     });
 
     // Set appropriate headers for streaming
@@ -56,7 +66,8 @@ export async function GET(
     const headers = new Headers({
       'Content-Type': contentType,
       'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=3600',
+      // Avoid CDN buffering issues; stream is dynamic
+      'Cache-Control': 'no-store',
     });
 
     // Handle range requests for seeking
