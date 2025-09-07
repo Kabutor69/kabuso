@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { YouTube } from "youtube-sr";
+import { YouTube, Video } from "youtube-sr";
 
 export const runtime = "nodejs";
 
+
+interface FormattedSong {
+  videoId: string;
+  title: string;
+  artists: string;
+  thumbnail: string;
+  duration: number;
+  views?: number;
+  uploadedAt?: string;
+}
+
 // Cache trending results for 30 minutes
-let cachedTrending: any[] = [];
+let cachedTrending: FormattedSong[] = [];
 let lastTrendingFetch = 0;
 const TRENDING_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const now = Date.now();
   
   // Return cached results if still fresh
@@ -27,7 +38,7 @@ export async function GET(req: NextRequest) {
       "new releases"
     ];
 
-    let allResults: any[] = [];
+    let allResults: Video[] = [];
     
     for (const searchTerm of searches) {
       try {
@@ -55,12 +66,12 @@ export async function GET(req: NextRequest) {
 
     const songs = Array.from(uniqueTracks.values())
       .slice(0, 24) // Top 24 trending
-      .map((video: any) => ({
+      .map((video) => ({
         videoId: video.id,
         title: video.title,
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
-        duration: video.duration?.seconds || 0,
+        duration: video.duration || 0,
         views: video.views,
         uploadedAt: video.uploadedAt,
       }));

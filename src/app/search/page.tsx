@@ -203,7 +203,7 @@ export default function SearchPage() {
               Search Music
             </h1>
           </div>
-          <p className="text-gray-400 text-sm mb-8">Find any song from YouTube Music's vast library</p>
+          <p className="text-gray-400 text-sm mb-8">Find any song from YouTube Music&apos;s vast library</p>
 
           {/* Search Form */}
           <form onSubmit={handleSearch} className="relative mb-8">
@@ -279,7 +279,7 @@ export default function SearchPage() {
           {hasSearched && !isSearching && tracks.length > 0 && (
             <div className="flex items-center justify-between mb-6">
               <p className="text-gray-400 text-sm">
-                Found {tracks.length} results for "{query}"
+                Found {tracks.length} results for &quot;{query}&quot;
               </p>
               <button 
                 onClick={playAllResults}

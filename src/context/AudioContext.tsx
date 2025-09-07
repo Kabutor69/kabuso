@@ -104,18 +104,21 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
 
   const playTrack = useCallback((track: Track, addToQueue = true, playNow = true) => {
     setState(prev => {
-      let newQueue = [...prev.queue];
       let newIndex = prev.currentIndex;
 
-      if (addToQueue) {
-        const existingIndex = newQueue.findIndex(t => t.videoId === track.videoId);
-        if (existingIndex === -1) {
-          newQueue.push(track);
-          newIndex = playNow ? newQueue.length - 1 : prev.currentIndex;
-        } else {
-          newIndex = playNow ? existingIndex : prev.currentIndex;
-        }
-      }
+      const newQueue = addToQueue 
+        ? (() => {
+            const queue = [...prev.queue];
+            const existingIndex = queue.findIndex(t => t.videoId === track.videoId);
+            if (existingIndex === -1) {
+              queue.push(track);
+              newIndex = playNow ? queue.length - 1 : prev.currentIndex;
+            } else {
+              newIndex = playNow ? existingIndex : prev.currentIndex;
+            }
+            return queue;
+          })()
+        : [...prev.queue];
 
       return {
         ...prev,

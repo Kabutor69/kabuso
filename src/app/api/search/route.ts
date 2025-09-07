@@ -3,6 +3,7 @@ import { YouTube } from "youtube-sr";
 
 export const runtime = "nodejs";
 
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q")?.trim();
@@ -34,18 +35,18 @@ export async function GET(req: NextRequest) {
 
     // Filter and format results
     const songs = results
-      .filter((video: any) => 
+      .filter((video) => 
         video && 
         video.id && 
         /^[a-zA-Z0-9-_]{11}$/.test(video.id) &&
         video.title
       )
-      .map((video: any) => ({
+      .map((video) => ({
         videoId: video.id,
         title: video.title,
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
-        duration: video.duration?.seconds || 0,
+        duration: video.duration || 0,
         views: video.views,
         uploadedAt: video.uploadedAt,
       }));

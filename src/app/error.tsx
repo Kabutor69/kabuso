@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import Link from "next/link";
 import { AlertCircle, RefreshCw, Home } from "lucide-react";
 
 export default function Error({
@@ -30,13 +31,13 @@ export default function Error({
               <RefreshCw className="w-4 h-4" />
               Try again
             </button>
-            <a
+            <Link
               href="/"
               className="flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
             >
               <Home className="w-4 h-4" />
               Go home
-            </a>
+            </Link>
           </div>
           {error.digest && (
             <p className="text-xs text-gray-500 mt-4">

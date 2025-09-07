@@ -59,7 +59,7 @@ export async function GET(
       headers.set('Content-Range', range);
     }
 
-    return new NextResponse(stream as any, {
+    return new NextResponse(stream as unknown as ReadableStream, {
       status: 206,
       headers,
     });

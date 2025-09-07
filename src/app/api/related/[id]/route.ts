@@ -4,6 +4,7 @@ import ytdl from "@distube/ytdl-core";
 
 export const runtime = "nodejs";
 
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -47,7 +48,7 @@ export async function GET(
 
     // Filter out the current video and format results
     const relatedSongs = results
-      .filter((video: any) => 
+      .filter((video) => 
         video && 
         video.id && 
         video.id !== videoId &&
@@ -55,12 +56,12 @@ export async function GET(
         video.title
       )
       .slice(0, 5) // Return top 5 related
-      .map((video: any) => ({
+      .map((video) => ({
         videoId: video.id,
         title: video.title,
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
-        duration: video.duration?.seconds || 0,
+        duration: video.duration || 0,
         views: video.views,
         uploadedAt: video.uploadedAt,
       }));
