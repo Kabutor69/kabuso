@@ -9,9 +9,10 @@ export default function FavoritesPage() {
   const { favorites, removeFromFavorites, isFavorite } = useFavorites();
   const { playTrack, addToQueue, currentTrack, isPlaying } = useAudio();
 
-  const formatDuration = (totalSeconds?: number) => {
-    if (!totalSeconds || totalSeconds < 1) return "0:00";
-    const seconds = Math.floor(totalSeconds);
+  const formatDuration = (raw?: number) => {
+    if (!raw || raw < 1) return "0:00";
+    // Normalize to seconds if value looks like milliseconds
+    const seconds = Math.floor(raw > 10000 ? raw / 1000 : raw);
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;

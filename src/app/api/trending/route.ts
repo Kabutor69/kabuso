@@ -77,8 +77,9 @@ export async function GET(req: NextRequest) {
         title: (video.title as string) || "",
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
+        // Normalize duration to seconds
         duration: typeof video.duration === 'number' 
-          ? video.duration 
+          ? (video.duration > 10000 ? Math.floor(video.duration / 1000) : video.duration)
           : (video.duration?.seconds || 0),
         views: video.views,
         uploadedAt: video.uploadedAt,

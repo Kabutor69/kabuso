@@ -41,9 +41,10 @@ export default function HomePage() {
     fetchTrending();
   }, []);
 
-  const formatDuration = (totalSeconds?: number) => {
-    if (!totalSeconds || totalSeconds < 1) return "0:00";
-    const seconds = Math.floor(totalSeconds);
+  const formatDuration = (raw?: number) => {
+    if (!raw || raw < 1) return "0:00";
+    // Some sources may provide milliseconds – normalize to seconds if too large
+    const seconds = Math.floor(raw > 10000 ? raw / 1000 : raw);
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;

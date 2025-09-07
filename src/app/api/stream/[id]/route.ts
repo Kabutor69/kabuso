@@ -5,6 +5,7 @@ import { Readable } from "stream";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+export const preferredRegion = ["iad1", "sfo1", "dub1"];
 
 export async function GET(
   req: NextRequest,
