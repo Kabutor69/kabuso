@@ -82,39 +82,35 @@ export async function GET(
       }
     }
 
-    // Create a readable stream (Node.js Readable) with optional byte range
-    const nodeStream = ytdl(videoId, {
-      format: bestAudio,
-      quality: 'highestaudio',
-      filter: 'audioonly',
-      requestOptions,
-      range: totalSize && statusCode === 206 ? { start: startByte, end: endByte } : undefined,
-      highWaterMark: 1 << 20, // 1MB buffer to reduce stalls on serverless
+    // Instead of piping ytdl stream (can be blocked on serverless), fetch the direct media URL
+    const upstreamHeaders: Record<string, string> = {
+      'user-agent': requestOptions.headers['user-agent'],
+      'accept-language': requestOptions.headers['accept-language'],
+    };
+    const clientRange = req.headers.get('range');
+    if (clientRange) upstreamHeaders['range'] = clientRange;
+
+    const upstream = await fetch(bestAudio.url!, {
+      headers: upstreamHeaders,
+      redirect: 'follow',
     });
 
-    // Set appropriate headers for streaming
-    const contentType = bestAudio.mimeType?.split(";")[0] || 'audio/mpeg';
+    // Prepare response headers from upstream
+    const contentType = upstream.headers.get('content-type') || bestAudio.mimeType?.split(';')[0] || 'audio/mpeg';
     const headers = new Headers({
       'Content-Type': contentType,
-      'Accept-Ranges': 'bytes',
       'Cache-Control': 'no-store',
+      'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
       'X-Content-Type-Options': 'nosniff',
       'Content-Disposition': 'inline',
     });
+    const cr = upstream.headers.get('content-range');
+    if (cr) headers.set('Content-Range', cr);
+    const cl = upstream.headers.get('content-length');
+    if (cl) headers.set('Content-Length', cl);
 
-    if (statusCode === 206 && totalSize && endByte !== undefined) {
-      const chunkSize = (endByte as number) - startByte + 1;
-      headers.set('Content-Range', `bytes ${startByte}-${endByte}/${totalSize}`);
-      headers.set('Content-Length', String(chunkSize));
-    } else if (totalSize) {
-      headers.set('Content-Length', String(totalSize));
-    }
-
-    // Convert Node stream to Web ReadableStream for NextResponse
-    const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream<Uint8Array>;
-
-    return new NextResponse(webStream, {
-      status: statusCode,
+    return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
+      status: upstream.status,
       headers,
     });
 
