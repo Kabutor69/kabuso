@@ -53,12 +53,34 @@ export async function GET(
       );
     }
 
-    // Create a readable stream (Node.js Readable)
+    // Range/seek support
+    const totalSize = parseInt((bestAudio as any).contentLength || '0', 10) || undefined;
+    const rangeHeader = req.headers.get('range');
+    let statusCode = 200;
+    let startByte = 0;
+    let endByte: number | undefined = totalSize ? totalSize - 1 : undefined;
+    if (rangeHeader && totalSize) {
+      const match = /bytes=(\d+)-(\d+)?/.exec(rangeHeader);
+      if (match) {
+        startByte = parseInt(match[1], 10);
+        if (match[2]) {
+          endByte = Math.min(parseInt(match[2], 10), totalSize - 1);
+        } else {
+          endByte = totalSize - 1;
+        }
+        if (startByte > (endByte as number)) startByte = 0;
+        statusCode = 206;
+      }
+    }
+
+    // Create a readable stream (Node.js Readable) with optional byte range
     const nodeStream = ytdl(videoId, {
       format: bestAudio,
       quality: 'highestaudio',
       filter: 'audioonly',
       requestOptions,
+      range: totalSize && statusCode === 206 ? { start: startByte, end: endByte } : undefined,
+      highWaterMark: 1 << 20, // 1MB buffer to reduce stalls on serverless
     });
 
     // Set appropriate headers for streaming
@@ -66,21 +88,24 @@ export async function GET(
     const headers = new Headers({
       'Content-Type': contentType,
       'Accept-Ranges': 'bytes',
-      // Avoid CDN buffering issues; stream is dynamic
       'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Disposition': 'inline',
     });
 
-    // Handle range requests for seeking
-    const range = req.headers.get('range');
-    if (range) {
-      headers.set('Accept-Ranges', 'bytes');
+    if (statusCode === 206 && totalSize && endByte !== undefined) {
+      const chunkSize = (endByte as number) - startByte + 1;
+      headers.set('Content-Range', `bytes ${startByte}-${endByte}/${totalSize}`);
+      headers.set('Content-Length', String(chunkSize));
+    } else if (totalSize) {
+      headers.set('Content-Length', String(totalSize));
     }
 
     // Convert Node stream to Web ReadableStream for NextResponse
     const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream<Uint8Array>;
 
     return new NextResponse(webStream, {
-      status: 200,
+      status: statusCode,
       headers,
     });
 

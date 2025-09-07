@@ -3,11 +3,23 @@ import { useFavorites } from "../../context/FavoritesContext";
 import { useAudio } from "../../context/AudioContext";
 import Navbar from "../../components/Navbar";
 import Playbar from "../../components/Playbar";
-import { Heart, Play, MoreHorizontal, Music, Trash2 } from "lucide-react";
+import { Heart, Play, MoreHorizontal, Music, Trash2, Clock } from "lucide-react";
 
 export default function FavoritesPage() {
   const { favorites, removeFromFavorites, isFavorite } = useFavorites();
   const { playTrack, addToQueue, currentTrack, isPlaying } = useAudio();
+
+  const formatDuration = (totalSeconds?: number) => {
+    if (!totalSeconds || totalSeconds < 1) return "0:00";
+    const seconds = Math.floor(totalSeconds);
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const playAllFavorites = () => {
     if (favorites.length === 0) return;
@@ -125,6 +137,14 @@ export default function FavoritesPage() {
                   <p className="text-gray-400 text-sm line-clamp-1" title={track.artists}>
                     {track.artists}
                   </p>
+                  {track.duration && (
+                    <div className="text-xs text-gray-500">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-700/40 text-gray-300 font-mono">
+                        <Clock className="w-3 h-3" />
+                        {formatDuration(track.duration)}
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="flex items-center gap-2 pt-2">
                     <button
