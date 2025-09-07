@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { YouTube } from "youtube-sr";
 
 export const runtime = "nodejs";
@@ -25,7 +25,7 @@ let cachedTrending: Array<{
 let lastTrendingFetch = 0;
 const TRENDING_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const now = Date.now();
   
   // Return cached results if still fresh

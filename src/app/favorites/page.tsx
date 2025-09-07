@@ -6,12 +6,11 @@ import Playbar from "../../components/Playbar";
 import { Heart, Play, MoreHorizontal, Music, Trash2, Clock } from "lucide-react";
 
 export default function FavoritesPage() {
-  const { favorites, removeFromFavorites, isFavorite } = useFavorites();
+  const { favorites, removeFromFavorites } = useFavorites();
   const { playTrack, addToQueue, currentTrack, isPlaying } = useAudio();
 
   const formatDuration = (raw?: number) => {
     if (!raw || raw < 1) return "0:00";
-    // Normalize to seconds if value looks like milliseconds
     const seconds = Math.floor(raw > 10000 ? raw / 1000 : raw);
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -101,6 +100,7 @@ export default function FavoritesPage() {
                 className="group bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 hover:bg-gray-800/70 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20 border border-gray-700/50"
               >
                 <div className="relative mb-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src={track.thumbnail} 
                     alt={track.title} 

@@ -17,7 +17,7 @@ type Song = {
 };
 
 export default function HomePage() {
-  const { playTrack, addToQueue, currentTrack } = useAudio();
+  const { playTrack, addToQueue } = useAudio();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +155,7 @@ export default function HomePage() {
                 className="group bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 hover:bg-gray-800/70 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20 border border-gray-700/50"
               >
                 <div className="relative mb-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src={song.thumbnail} 
                     alt={song.title} 

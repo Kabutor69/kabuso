@@ -89,6 +89,13 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [state.volume, state.playbackMode]);
 
+  // Apply volume changes to the audio element
+  useEffect(() => {
+    if (audioRef.current && !state.isMuted) {
+      audioRef.current.volume = state.volume;
+    }
+  }, [state.volume, state.isMuted]);
+
   const setError = useCallback((error: string | null) => {
     setState(prev => ({ ...prev, error }));
   }, []);
@@ -180,7 +187,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     if (state.isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play().catch(err => {
+      audioRef.current.play().catch(() => {
         setState(prev => ({ ...prev, error: 'Playback failed' }));
       });
     }
@@ -257,7 +264,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
           } else {
             setState(prev => ({ ...prev, error: 'No more songs available', isLoading: false }));
           }
-        } catch (err) {
+        } catch {
           setState(prev => ({ ...prev, error: 'Failed to find next song', isLoading: false }));
         }
       }
@@ -343,8 +350,8 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
           };
         });
       }
-    } catch (err) {
-      console.error('Failed to load related songs:', err);
+    } catch {
+      console.error('Failed to load related songs');
     }
   }, []);
 
@@ -380,7 +387,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         if (state.currentTrack && state.queue.length <= 2) {
           loadRelatedSongs(state.currentTrack.videoId);
         }
-      } catch (err) {
+      } catch {
         setState(prev => ({ 
           ...prev, 
           isPlaying: false, 

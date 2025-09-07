@@ -105,6 +105,7 @@ export default function Playbar() {
           {/* Track Info */}
           <div className="flex items-center gap-3 w-full md:w-1/3 min-w-0">
             <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentTrack.thumbnail}
                 alt={currentTrack.title}
@@ -287,6 +288,7 @@ export default function Playbar() {
                 onClick={() => playFromQueue(index)}
               >
                 <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src={track.thumbnail} 
                     alt={track.title} 

@@ -1,15 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAudio } from "../context/AudioContext";
-import { Search, Home, Music, Volume2, VolumeX, List, Heart } from "lucide-react";
-import { useState } from "react";
+import { Search, Home, Music, Heart } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { currentTrack, queue, isPlaying, volume, isMuted, setVolume, toggleMute } = useAudio();
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-  const [showQueue, setShowQueue] = useState(false);
   
   const linkClasses = (path: string) =>
     `flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${

@@ -16,13 +16,7 @@ import {
   Heart
 } from "lucide-react";
 
-const TrackSkeleton = () => (
-  <div className="animate-pulse">
-    <div className="bg-gray-800 rounded-xl aspect-square mb-3"></div>
-    <div className="bg-gray-800 h-4 rounded mb-2"></div>
-    <div className="bg-gray-800 h-3 rounded w-3/4"></div>
-  </div>
-);
+// Skeleton kept for potential future use
 
 const SearchResultCard = ({ 
   track, 
@@ -44,6 +38,7 @@ const SearchResultCard = ({
   <div className="group relative bg-gray-900 bg-opacity-50 rounded-xl p-4 hover:bg-opacity-70 transition-all duration-200 border border-gray-800 hover:border-gray-700">
     <div className="flex items-center gap-4">
       <div className="relative">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img 
           src={track.thumbnail} 
           alt={track.title} 
