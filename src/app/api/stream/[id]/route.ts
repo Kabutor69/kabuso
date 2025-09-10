@@ -26,13 +26,99 @@ export async function GET(
         'user-agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
         'accept-language': 'en-US,en;q=0.9',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'accept-encoding': 'gzip, deflate, br',
+        'dnt': '1',
+        'connection': 'keep-alive',
+        'upgrade-insecure-requests': '1',
       },
     } as const;
 
     // Try multiple approaches to get audio stream
     console.log(`[Stream] Starting stream for videoId: ${videoId}`);
 
-    // Approach 1: Try Invidious API (more reliable for serverless)
+    // Approach 1: Try YouTube-DL API (most reliable)
+    const youtubeDlInstances = [
+      'https://api.cobalt.tools',
+      'https://co.wuk.sh',
+    ];
+
+    for (const base of youtubeDlInstances) {
+      try {
+        console.log(`[Stream] Trying YouTube-DL instance: ${base}`);
+        const infoRes = await fetch(`${base}/api/json`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...requestOptions.headers,
+          },
+          body: JSON.stringify({
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            vFormat: 'mp4',
+            aFormat: 'mp4',
+            isAudioOnly: true,
+            isNoTTWatermark: true,
+            isTTFullAudio: true,
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+        
+        if (!infoRes.ok) {
+          console.log(`[Stream] YouTube-DL ${base} failed with status: ${infoRes.status}`);
+          continue;
+        }
+        
+        const infoJson = await infoRes.json();
+        console.log(`[Stream] YouTube-DL response keys:`, Object.keys(infoJson || {}));
+        
+        if (infoJson?.status === 'success' && infoJson?.url) {
+          console.log(`[Stream] Using YouTube-DL audio stream from: ${base}`);
+          
+          const upstreamHeaders: Record<string, string> = {
+            'user-agent': requestOptions.headers['user-agent'],
+            'accept-language': requestOptions.headers['accept-language'],
+          };
+          const clientRange = req.headers.get('range');
+          if (clientRange) upstreamHeaders['range'] = clientRange;
+
+          const upstream = await fetch(infoJson.url, {
+            headers: upstreamHeaders,
+            redirect: 'follow',
+            signal: AbortSignal.timeout(15000),
+          });
+
+          if (!upstream.ok) {
+            console.log(`[Stream] YouTube-DL upstream fetch failed: ${upstream.status}`);
+            continue;
+          }
+
+          const contentType = upstream.headers.get('content-type') || 'audio/mpeg';
+          const headers = new Headers({
+            'Content-Type': contentType,
+            'Cache-Control': 'no-store',
+            'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
+            'X-Content-Type-Options': 'nosniff',
+            'Content-Disposition': 'inline',
+          });
+          const cr = upstream.headers.get('content-range');
+          if (cr) headers.set('Content-Range', cr);
+          const cl = upstream.headers.get('content-length');
+          if (cl) headers.set('Content-Length', cl);
+
+          console.log(`[Stream] Successfully proxying from YouTube-DL: ${base}`);
+          return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
+            status: upstream.status,
+            headers,
+          });
+        }
+      } catch (err) {
+        console.log(`[Stream] YouTube-DL ${base} error:`, err);
+        continue;
+      }
+    }
+
+    // Approach 2: Try Invidious API (more reliable for serverless)
     const invidiousInstances = [
       'https://inv.riverside.rocks',
       'https://invidious.flokinet.to',
@@ -112,7 +198,7 @@ export async function GET(
       }
     }
 
-    // Approach 2: Try Piped API as fallback
+    // Approach 3: Try Piped API as fallback
     const pipedInstances = [
       'https://pipedapi.kavin.rocks',
       'https://piped.video',
@@ -191,7 +277,7 @@ export async function GET(
       }
     }
 
-    // Approach 3: Fallback to ytdl with better error handling
+    // Approach 4: Fallback to ytdl with better error handling
     console.log(`[Stream] All proxy instances failed, trying ytdl fallback`);
     try {
       const info = await ytdl.getInfo(videoId, { requestOptions });
