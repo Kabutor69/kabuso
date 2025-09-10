@@ -55,7 +55,8 @@ export async function GET(
         const infoJson = await infoRes.json();
         console.log(`[Stream] Invidious response keys:`, Object.keys(infoJson || {}));
         
-        const audioStreams: Array<{ url: string; mimeType?: string; bitrate?: number; codec?: string }> = infoJson?.audioStreams || infoJson?.adaptiveFormats?.filter((f: any) => f.type?.includes('audio')) || [];
+        const audioStreams: Array<{ url: string; mimeType?: string; bitrate?: number; codec?: string }> = infoJson?.audioStreams || 
+          (infoJson?.adaptiveFormats as Array<{ url: string; type?: string; mimeType?: string; bitrate?: number; codec?: string }>)?.filter(f => f.type?.includes('audio')) || [];
         if (audioStreams.length > 0) {
           console.log(`[Stream] Found ${audioStreams.length} audio streams from Invidious`);
           
