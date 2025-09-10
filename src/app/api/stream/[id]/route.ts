@@ -32,7 +32,86 @@ export async function GET(
     // Try multiple approaches to get audio stream
     console.log(`[Stream] Starting stream for videoId: ${videoId}`);
 
-    // Approach 1: Try Piped API first
+    // Approach 1: Try Invidious API (more reliable for serverless)
+    const invidiousInstances = [
+      'https://inv.riverside.rocks',
+      'https://invidious.flokinet.to',
+      'https://yt.artemislena.eu',
+    ];
+
+    for (const base of invidiousInstances) {
+      try {
+        console.log(`[Stream] Trying Invidious instance: ${base}`);
+        const infoRes = await fetch(`${base}/api/v1/videos/${videoId}`, {
+          headers: requestOptions.headers,
+          signal: AbortSignal.timeout(10000),
+        });
+        
+        if (!infoRes.ok) {
+          console.log(`[Stream] Invidious ${base} failed with status: ${infoRes.status}`);
+          continue;
+        }
+        
+        const infoJson = await infoRes.json();
+        console.log(`[Stream] Invidious response keys:`, Object.keys(infoJson || {}));
+        
+        const audioStreams: Array<{ url: string; mimeType?: string; bitrate?: number; codec?: string }> = infoJson?.audioStreams || infoJson?.adaptiveFormats?.filter((f: any) => f.type?.includes('audio')) || [];
+        if (audioStreams.length > 0) {
+          console.log(`[Stream] Found ${audioStreams.length} audio streams from Invidious`);
+          
+          // Prefer mp4/m4a, then highest bitrate
+          const preferred = audioStreams.find(s => s.mimeType?.includes('audio/mp4')) ||
+                           audioStreams.find(s => s.codec?.includes('mp4a')) ||
+                           audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+
+          if (preferred?.url) {
+            console.log(`[Stream] Using Invidious audio stream: ${preferred.mimeType}, bitrate: ${preferred.bitrate}`);
+            
+            const upstreamHeaders: Record<string, string> = {
+              'user-agent': requestOptions.headers['user-agent'],
+              'accept-language': requestOptions.headers['accept-language'],
+            };
+            const clientRange = req.headers.get('range');
+            if (clientRange) upstreamHeaders['range'] = clientRange;
+
+            const upstream = await fetch(preferred.url, {
+              headers: upstreamHeaders,
+              redirect: 'follow',
+              signal: AbortSignal.timeout(15000),
+            });
+
+            if (!upstream.ok) {
+              console.log(`[Stream] Invidious upstream fetch failed: ${upstream.status}`);
+              continue;
+            }
+
+            const contentType = upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg';
+            const headers = new Headers({
+              'Content-Type': contentType,
+              'Cache-Control': 'no-store',
+              'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
+              'X-Content-Type-Options': 'nosniff',
+              'Content-Disposition': 'inline',
+            });
+            const cr = upstream.headers.get('content-range');
+            if (cr) headers.set('Content-Range', cr);
+            const cl = upstream.headers.get('content-length');
+            if (cl) headers.set('Content-Length', cl);
+
+            console.log(`[Stream] Successfully proxying from Invidious: ${base}`);
+            return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
+              status: upstream.status,
+              headers,
+            });
+          }
+        }
+      } catch (err) {
+        console.log(`[Stream] Invidious ${base} error:`, err);
+        continue;
+      }
+    }
+
+    // Approach 2: Try Piped API as fallback
     const pipedInstances = [
       'https://pipedapi.kavin.rocks',
       'https://piped.video',
@@ -111,8 +190,8 @@ export async function GET(
       }
     }
 
-    // Approach 2: Fallback to ytdl with better error handling
-    console.log(`[Stream] All Piped instances failed, trying ytdl fallback`);
+    // Approach 3: Fallback to ytdl with better error handling
+    console.log(`[Stream] All proxy instances failed, trying ytdl fallback`);
     try {
       const info = await ytdl.getInfo(videoId, { requestOptions });
       if (!info || !info.videoDetails) {
