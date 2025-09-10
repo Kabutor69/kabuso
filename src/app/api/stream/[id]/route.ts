@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import ytdl from "@distube/ytdl-core";
-import { Readable } from "stream";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,7 +55,7 @@ export async function GET(
         const infoJson = await infoRes.json();
         console.log(`[Stream] Piped response keys:`, Object.keys(infoJson || {}));
         
-        const audioStreams = infoJson?.audioStreams || [];
+        const audioStreams: Array<{ url: string; mimeType?: string; bitrate?: number; codec?: string }> = infoJson?.audioStreams || [];
         if (audioStreams.length > 0) {
           console.log(`[Stream] Found ${audioStreams.length} audio streams`);
           
