@@ -1,438 +1,224 @@
-import { NextRequest, NextResponse } from "next/server";
-import ytdl from "@distube/ytdl-core";
+import { NextRequest, NextResponse } from 'next/server';
+import ytdl from '@distube/ytdl-core';
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// Force dynamic rendering and set max duration for Vercel
+export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
-export const preferredRegion = ["iad1", "sfo1", "dub1"];
+export const preferredRegion = ['iad1', 'sfo1', 'dub1'];
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: videoId } = await params;
-
-  if (!videoId || !/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
-    return NextResponse.json(
-      { error: "Invalid video ID" }, 
-      { status: 400 }
-    );
+  
+  if (!videoId) {
+    return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
   }
 
+  console.log(`[Stream] Starting stream for videoId: ${videoId}`);
+
+  // Browser-like headers to avoid bot detection
+  const requestOptions = {
+    headers: {
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'accept-language': 'en-US,en;q=0.9',
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'accept-encoding': 'gzip, deflate, br',
+      'dnt': '1',
+      'connection': 'keep-alive',
+      'upgrade-insecure-requests': '1',
+    }
+  };
+
   try {
-    // Common headers to improve success rate from cloud hosts
-    const requestOptions = {
-      headers: {
-        'user-agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-        'accept-language': 'en-US,en;q=0.9',
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'accept-encoding': 'gzip, deflate, br',
-        'dnt': '1',
-        'connection': 'keep-alive',
-        'upgrade-insecure-requests': '1',
-      },
-    } as const;
+    // Method 1: Direct YouTube page parsing (most reliable)
+    console.log(`[Stream] Trying direct YouTube page parsing`);
+    
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const pageResponse = await fetch(youtubeUrl, {
+      headers: requestOptions.headers,
+      signal: AbortSignal.timeout(15000),
+    });
 
-    // Try multiple approaches to get audio stream
-    console.log(`[Stream] Starting stream for videoId: ${videoId}`);
+    if (pageResponse.ok) {
+      const pageText = await pageResponse.text();
+      console.log(`[Stream] Got YouTube page, length: ${pageText.length}`);
 
-    // Approach 1: Try simple YouTube proxy (most reliable for serverless)
-    const simpleProxyInstances = [
-      'https://www.youtube.com/watch?v=' + videoId,
-    ];
+      // Extract player response from page
+      const playerResponseMatch = pageText.match(/var ytInitialPlayerResponse = ({.+?});/);
+      if (playerResponseMatch) {
+        try {
+          const playerResponse = JSON.parse(playerResponseMatch[1]);
+          console.log(`[Stream] Parsed player response`);
 
-    for (const url of simpleProxyInstances) {
-      try {
-        console.log(`[Stream] Trying direct YouTube URL: ${url}`);
-        
-        // Try to get the page and extract stream info
-        const pageRes = await fetch(url, {
-          headers: requestOptions.headers,
-          signal: AbortSignal.timeout(10000),
-        });
-        
-        if (!pageRes.ok) {
-          console.log(`[Stream] Direct YouTube failed with status: ${pageRes.status}`);
-          continue;
-        }
-        
-        const pageText = await pageRes.text();
-        console.log(`[Stream] Got YouTube page, length: ${pageText.length}`);
-        
-        // Look for player config in the page
-        const playerConfigMatch = pageText.match(/var ytInitialPlayerResponse = ({.+?});/);
-        if (playerConfigMatch) {
-          try {
-            const playerConfig = JSON.parse(playerConfigMatch[1]);
-            console.log(`[Stream] Found player config`);
-            
-            const streamingData = playerConfig?.streamingData;
-            if (streamingData?.adaptiveFormats) {
-              const audioFormats = streamingData.adaptiveFormats.filter((f: { mimeType?: string; url?: string }) => 
-                f.mimeType?.includes('audio') && f.url
-              );
-              
-              if (audioFormats.length > 0) {
-                console.log(`[Stream] Found ${audioFormats.length} audio formats from direct YouTube`);
+          const streamingData = playerResponse?.streamingData;
+          if (streamingData?.adaptiveFormats) {
+            console.log(`[Stream] Found ${streamingData.adaptiveFormats.length} adaptive formats`);
+
+            // Filter for audio-only formats
+            const audioFormats = streamingData.adaptiveFormats.filter((format: { mimeType?: string; url?: string }) => {
+              return format.mimeType?.includes('audio') && 
+                     format.url && 
+                     !format.mimeType?.includes('video');
+            });
+
+            if (audioFormats.length > 0) {
+              console.log(`[Stream] Found ${audioFormats.length} audio formats`);
+
+              // Select best audio format (prefer mp4/m4a, then highest bitrate)
+              const bestFormat = audioFormats.find((f: { mimeType?: string }) => f.mimeType?.includes('audio/mp4')) ||
+                                audioFormats.find((f: { codec?: string }) => f.codec?.includes('mp4a')) ||
+                                audioFormats.sort((a: { bitrate?: number }, b: { bitrate?: number }) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+
+              if (bestFormat?.url) {
+                console.log(`[Stream] Using audio format: ${bestFormat.mimeType}, bitrate: ${bestFormat.bitrate}`);
+
+                // Get range header for seeking support
+                const range = req.headers.get('range');
+                const upstreamHeaders: Record<string, string> = {
+                  'user-agent': requestOptions.headers['user-agent'],
+                  'accept-language': requestOptions.headers['accept-language'],
+                };
                 
-                // Prefer mp4/m4a, then highest bitrate
-                const preferred = audioFormats.find((f: { mimeType?: string }) => f.mimeType?.includes('audio/mp4')) ||
-                                 audioFormats.find((f: { codec?: string }) => f.codec?.includes('mp4a')) ||
-                                 audioFormats.sort((a: { bitrate?: number }, b: { bitrate?: number }) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+                if (range) {
+                  upstreamHeaders['range'] = range;
+                }
 
-                if (preferred?.url) {
-                  console.log(`[Stream] Using direct YouTube audio stream: ${preferred.mimeType}, bitrate: ${preferred.bitrate}`);
-                  
-                  const upstreamHeaders: Record<string, string> = {
-                    'user-agent': requestOptions.headers['user-agent'],
-                    'accept-language': requestOptions.headers['accept-language'],
-                  };
-                  const clientRange = req.headers.get('range');
-                  if (clientRange) upstreamHeaders['range'] = clientRange;
+                // Fetch the audio stream
+                const streamResponse = await fetch(bestFormat.url, {
+                  headers: upstreamHeaders,
+                  redirect: 'follow',
+                  signal: AbortSignal.timeout(20000),
+                });
 
-                  const upstream = await fetch(preferred.url, {
-                    headers: upstreamHeaders,
-                    redirect: 'follow',
-                    signal: AbortSignal.timeout(15000),
+                if (streamResponse.ok) {
+                  console.log(`[Stream] Successfully fetched audio stream`);
+
+                  // Prepare response headers
+                  const responseHeaders = new Headers({
+                    'Content-Type': bestFormat.mimeType || 'audio/mpeg',
+                    'Cache-Control': 'no-store, no-cache, must-revalidate',
+                    'Accept-Ranges': 'bytes',
+                    'X-Content-Type-Options': 'nosniff',
                   });
 
-                  if (!upstream.ok) {
-                    console.log(`[Stream] Direct YouTube upstream fetch failed: ${upstream.status}`);
-                    continue;
+                  // Copy range-related headers if present
+                  const contentRange = streamResponse.headers.get('content-range');
+                  const contentLength = streamResponse.headers.get('content-length');
+                  
+                  if (contentRange) {
+                    responseHeaders.set('Content-Range', contentRange);
+                  }
+                  if (contentLength) {
+                    responseHeaders.set('Content-Length', contentLength);
                   }
 
-                  const contentType = upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg';
-                  const headers = new Headers({
-                    'Content-Type': contentType,
-                    'Cache-Control': 'no-store',
-                    'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
-                    'X-Content-Type-Options': 'nosniff',
-                    'Content-Disposition': 'inline',
+                  // Return the stream with appropriate status
+                  const status = range ? 206 : 200;
+                  
+                  console.log(`[Stream] Returning audio stream with status ${status}`);
+                  return new NextResponse(streamResponse.body as ReadableStream<Uint8Array>, {
+                    status,
+                    headers: responseHeaders,
                   });
-                  const cr = upstream.headers.get('content-range');
-                  if (cr) headers.set('Content-Range', cr);
-                  const cl = upstream.headers.get('content-length');
-                  if (cl) headers.set('Content-Length', cl);
-
-                  console.log(`[Stream] Successfully proxying from direct YouTube`);
-                  return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
-                    status: upstream.status,
-                    headers,
-                  });
+                } else {
+                  console.log(`[Stream] Stream fetch failed: ${streamResponse.status}`);
                 }
               }
+            } else {
+              console.log(`[Stream] No audio formats found in adaptiveFormats`);
             }
-          } catch (parseErr) {
-            console.log(`[Stream] Failed to parse player config:`, parseErr);
+          } else {
+            console.log(`[Stream] No streamingData or adaptiveFormats found`);
           }
+        } catch (parseError) {
+          console.log(`[Stream] Failed to parse player response:`, parseError);
         }
-      } catch (err) {
-        console.log(`[Stream] Direct YouTube error:`, err);
-        continue;
+      } else {
+        console.log(`[Stream] Player response not found in page`);
       }
+    } else {
+      console.log(`[Stream] YouTube page fetch failed: ${pageResponse.status}`);
     }
 
-
-    // Approach 2: Try YouTube-DL API (most reliable)
-    const youtubeDlInstances = [
-      'https://api.cobalt.tools',
-      'https://co.wuk.sh',
-    ];
-
-    for (const base of youtubeDlInstances) {
-      try {
-        console.log(`[Stream] Trying YouTube-DL instance: ${base}`);
-        const infoRes = await fetch(`${base}/api/json`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            ...requestOptions.headers,
-          },
-          body: JSON.stringify({
-            url: `https://www.youtube.com/watch?v=${videoId}`,
-            vFormat: 'mp4',
-            aFormat: 'mp4',
-            isAudioOnly: true,
-            isNoTTWatermark: true,
-            isTTFullAudio: true,
-          }),
-          signal: AbortSignal.timeout(15000),
-        });
-        
-        if (!infoRes.ok) {
-          console.log(`[Stream] YouTube-DL ${base} failed with status: ${infoRes.status}`);
-          continue;
-        }
-        
-        const infoJson = await infoRes.json();
-        console.log(`[Stream] YouTube-DL response keys:`, Object.keys(infoJson || {}));
-        
-        if (infoJson?.status === 'success' && infoJson?.url) {
-          console.log(`[Stream] Using YouTube-DL audio stream from: ${base}`);
-          
-          const upstreamHeaders: Record<string, string> = {
-            'user-agent': requestOptions.headers['user-agent'],
-            'accept-language': requestOptions.headers['accept-language'],
-          };
-          const clientRange = req.headers.get('range');
-          if (clientRange) upstreamHeaders['range'] = clientRange;
-
-          const upstream = await fetch(infoJson.url, {
-            headers: upstreamHeaders,
-            redirect: 'follow',
-            signal: AbortSignal.timeout(15000),
-          });
-
-          if (!upstream.ok) {
-            console.log(`[Stream] YouTube-DL upstream fetch failed: ${upstream.status}`);
-            continue;
-          }
-
-          const contentType = upstream.headers.get('content-type') || 'audio/mpeg';
-          const headers = new Headers({
-            'Content-Type': contentType,
-            'Cache-Control': 'no-store',
-            'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
-            'X-Content-Type-Options': 'nosniff',
-            'Content-Disposition': 'inline',
-          });
-          const cr = upstream.headers.get('content-range');
-          if (cr) headers.set('Content-Range', cr);
-          const cl = upstream.headers.get('content-length');
-          if (cl) headers.set('Content-Length', cl);
-
-          console.log(`[Stream] Successfully proxying from YouTube-DL: ${base}`);
-          return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
-            status: upstream.status,
-            headers,
-          });
-        }
-      } catch (err) {
-        console.log(`[Stream] YouTube-DL ${base} error:`, err);
-        continue;
-      }
-    }
-
-    // Approach 3: Try Invidious API (more reliable for serverless)
-    const invidiousInstances = [
-      'https://inv.riverside.rocks',
-      'https://invidious.flokinet.to',
-      'https://yt.artemislena.eu',
-    ];
-
-    for (const base of invidiousInstances) {
-      try {
-        console.log(`[Stream] Trying Invidious instance: ${base}`);
-        const infoRes = await fetch(`${base}/api/v1/videos/${videoId}`, {
-          headers: requestOptions.headers,
-          signal: AbortSignal.timeout(10000),
-        });
-        
-        if (!infoRes.ok) {
-          console.log(`[Stream] Invidious ${base} failed with status: ${infoRes.status}`);
-          continue;
-        }
-        
-        const infoJson = await infoRes.json();
-        console.log(`[Stream] Invidious response keys:`, Object.keys(infoJson || {}));
-        
-        const audioStreams: Array<{ url: string; mimeType?: string; bitrate?: number; codec?: string }> = infoJson?.audioStreams || 
-          (infoJson?.adaptiveFormats as Array<{ url: string; type?: string; mimeType?: string; bitrate?: number; codec?: string }>)?.filter(f => f.type?.includes('audio')) || [];
-        if (audioStreams.length > 0) {
-          console.log(`[Stream] Found ${audioStreams.length} audio streams from Invidious`);
-          
-          // Prefer mp4/m4a, then highest bitrate
-          const preferred = audioStreams.find(s => s.mimeType?.includes('audio/mp4')) ||
-                           audioStreams.find(s => s.codec?.includes('mp4a')) ||
-                           audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-
-          if (preferred?.url) {
-            console.log(`[Stream] Using Invidious audio stream: ${preferred.mimeType}, bitrate: ${preferred.bitrate}`);
-            
-            const upstreamHeaders: Record<string, string> = {
-              'user-agent': requestOptions.headers['user-agent'],
-              'accept-language': requestOptions.headers['accept-language'],
-            };
-            const clientRange = req.headers.get('range');
-            if (clientRange) upstreamHeaders['range'] = clientRange;
-
-            const upstream = await fetch(preferred.url, {
-              headers: upstreamHeaders,
-              redirect: 'follow',
-              signal: AbortSignal.timeout(15000),
-            });
-
-            if (!upstream.ok) {
-              console.log(`[Stream] Invidious upstream fetch failed: ${upstream.status}`);
-              continue;
-            }
-
-            const contentType = upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg';
-            const headers = new Headers({
-              'Content-Type': contentType,
-              'Cache-Control': 'no-store',
-              'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
-              'X-Content-Type-Options': 'nosniff',
-              'Content-Disposition': 'inline',
-            });
-            const cr = upstream.headers.get('content-range');
-            if (cr) headers.set('Content-Range', cr);
-            const cl = upstream.headers.get('content-length');
-            if (cl) headers.set('Content-Length', cl);
-
-            console.log(`[Stream] Successfully proxying from Invidious: ${base}`);
-            return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
-              status: upstream.status,
-              headers,
-            });
-          }
-        }
-      } catch (err) {
-        console.log(`[Stream] Invidious ${base} error:`, err);
-        continue;
-      }
-    }
-
-    // Approach 4: Try Piped API as fallback
-    const pipedInstances = [
-      'https://pipedapi.kavin.rocks',
-      'https://piped.video',
-      'https://pipedapi.tux.pizza',
-    ];
-
-    for (const base of pipedInstances) {
-      try {
-        console.log(`[Stream] Trying Piped instance: ${base}`);
-        const infoRes = await fetch(`${base}/streams/${videoId}`, {
-          headers: requestOptions.headers,
-          signal: AbortSignal.timeout(10000), // 10s timeout
-        });
-        
-        if (!infoRes.ok) {
-          console.log(`[Stream] Piped ${base} failed with status: ${infoRes.status}`);
-          continue;
-        }
-        
-        const infoJson = await infoRes.json();
-        console.log(`[Stream] Piped response keys:`, Object.keys(infoJson || {}));
-        
-        const audioStreams: Array<{ url: string; mimeType?: string; bitrate?: number; codec?: string }> = infoJson?.audioStreams || [];
-        if (audioStreams.length > 0) {
-          console.log(`[Stream] Found ${audioStreams.length} audio streams`);
-          
-          // Prefer mp4/m4a, then highest bitrate
-          const preferred = audioStreams.find(s => s.mimeType?.includes('audio/mp4')) ||
-                           audioStreams.find(s => s.codec?.includes('mp4a')) ||
-                           audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-
-          if (preferred?.url) {
-            console.log(`[Stream] Using audio stream: ${preferred.mimeType}, bitrate: ${preferred.bitrate}`);
-            
-            const upstreamHeaders: Record<string, string> = {
-              'user-agent': requestOptions.headers['user-agent'],
-              'accept-language': requestOptions.headers['accept-language'],
-            };
-            const clientRange = req.headers.get('range');
-            if (clientRange) upstreamHeaders['range'] = clientRange;
-
-            const upstream = await fetch(preferred.url, {
-              headers: upstreamHeaders,
-              redirect: 'follow',
-              signal: AbortSignal.timeout(15000), // 15s timeout
-            });
-
-            if (!upstream.ok) {
-              console.log(`[Stream] Upstream fetch failed: ${upstream.status}`);
-              continue;
-            }
-
-            const contentType = upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg';
-            const headers = new Headers({
-              'Content-Type': contentType,
-              'Cache-Control': 'no-store',
-              'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
-              'X-Content-Type-Options': 'nosniff',
-              'Content-Disposition': 'inline',
-            });
-            const cr = upstream.headers.get('content-range');
-            if (cr) headers.set('Content-Range', cr);
-            const cl = upstream.headers.get('content-length');
-            if (cl) headers.set('Content-Length', cl);
-
-            console.log(`[Stream] Successfully proxying from Piped: ${base}`);
-            return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
-              status: upstream.status,
-              headers,
-            });
-          }
-        }
-      } catch (err) {
-        console.log(`[Stream] Piped ${base} error:`, err);
-        continue;
-      }
-    }
-
-    // Approach 5: Fallback to ytdl with better error handling
-    console.log(`[Stream] All proxy instances failed, trying ytdl fallback`);
+    // Method 2: ytdl-core fallback with proper configuration
+    console.log(`[Stream] Trying ytdl-core fallback`);
+    
     try {
-      const info = await ytdl.getInfo(videoId, { 
-        requestOptions,
+      const info = await ytdl.getInfo(videoId, {
+        requestOptions: {
+          headers: requestOptions.headers,
+        },
       });
+
       if (!info || !info.videoDetails) {
         console.log(`[Stream] ytdl: Video not found`);
         return NextResponse.json({ error: 'Video not found' }, { status: 404 });
       }
-      
-      const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
-      console.log(`[Stream] ytdl: Found ${audioFormats.length} audio formats`);
-      
-      const preferred = audioFormats.find(f => f.mimeType?.includes('audio/mp4')) || audioFormats[0];
-      if (!preferred?.url) {
-        console.log(`[Stream] ytdl: No audio format available`);
-        return NextResponse.json({ error: 'No audio format available' }, { status: 400 });
-      }
-      
-      console.log(`[Stream] ytdl: Using format: ${preferred.mimeType}`);
-      const upstream = await fetch(preferred.url, {
-        headers: requestOptions.headers,
-        redirect: 'follow',
-        signal: AbortSignal.timeout(15000),
+
+      console.log(`[Stream] ytdl: Got video info for "${info.videoDetails.title}"`);
+
+      // Get audio stream
+      const audioStream = ytdl(videoId, {
+        quality: 'highestaudio',
+        filter: 'audioonly',
+        requestOptions: {
+          headers: requestOptions.headers,
+        },
       });
-      
-      if (!upstream.ok) {
-        console.log(`[Stream] ytdl upstream failed: ${upstream.status}`);
-        throw new Error(`Upstream fetch failed: ${upstream.status}`);
-      }
-      
+
+      // Convert Node.js stream to Web ReadableStream
+      const webStream = new ReadableStream({
+        start(controller) {
+          audioStream.on('data', (chunk) => {
+            controller.enqueue(chunk);
+          });
+          
+          audioStream.on('end', () => {
+            controller.close();
+          });
+          
+          audioStream.on('error', (error) => {
+            controller.error(error);
+          });
+        },
+        cancel() {
+          audioStream.destroy();
+        }
+      });
+
+      // Get range header for seeking
+      const range = req.headers.get('range');
+      const status = range ? 206 : 200;
+
       const headers = new Headers({
-        'Content-Type': upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg',
-        'Cache-Control': 'no-store',
-        'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
+        'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Accept-Ranges': 'bytes',
         'X-Content-Type-Options': 'nosniff',
-        'Content-Disposition': 'inline',
       });
-      const cr = upstream.headers.get('content-range');
-      if (cr) headers.set('Content-Range', cr);
-      const cl = upstream.headers.get('content-length');
-      if (cl) headers.set('Content-Length', cl);
-      
-      console.log(`[Stream] ytdl: Successfully proxying stream`);
-      return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
-        status: upstream.status,
+
+      console.log(`[Stream] ytdl: Returning audio stream with status ${status}`);
+      return new NextResponse(webStream, {
+        status,
         headers,
       });
-    } catch (ytdlErr) {
-      console.log(`[Stream] ytdl fallback failed:`, ytdlErr);
-      throw ytdlErr;
+
+    } catch (ytdlError) {
+      console.log(`[Stream] ytdl fallback failed:`, ytdlError);
     }
 
-  } catch (err) {
-    console.error("[Stream] Final error:", err);
-    return NextResponse.json(
-      { error: `Failed to stream audio: ${err instanceof Error ? err.message : 'Unknown error'}` }, 
-      { status: 500 }
-    );
+    // If all methods fail
+    console.log(`[Stream] All streaming methods failed`);
+    return NextResponse.json({ 
+      error: 'Unable to stream video. Please try again later.' 
+    }, { status: 500 });
+
+  } catch (error) {
+    console.log(`[Stream] Final error:`, error);
+    return NextResponse.json({ 
+      error: 'Streaming failed. Please try again.' 
+    }, { status: 500 });
   }
 }

@@ -17,11 +17,11 @@ export default function Navbar() {
 
   return (
     <nav className="w-full bg-gradient-to-r from-black/95 to-gray-900/95 border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
-      {/* Logo */}
+      
       <Link href="/" className="flex items-center gap-2 group">
-        <div className="bg-cyan-500 p-2 rounded-xl group-hover:rotate-12 transition-transform duration-200">
+        {/* <div className="bg-cyan-500 p-2 rounded-xl group-hover:rotate-12 transition-transform duration-200">
           <Music className="w-6 h-6 text-black" />
-        </div>
+        </div> */}
         <div>
           <h1 className="text-xl font-bold text-cyan-400 group-hover:text-cyan-300 transition-colors">
             Kabuso
