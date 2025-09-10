@@ -37,7 +37,104 @@ export async function GET(
     // Try multiple approaches to get audio stream
     console.log(`[Stream] Starting stream for videoId: ${videoId}`);
 
-    // Approach 1: Try YouTube-DL API (most reliable)
+    // Approach 1: Try simple YouTube proxy (most reliable for serverless)
+    const simpleProxyInstances = [
+      'https://www.youtube.com/watch?v=' + videoId,
+    ];
+
+    for (const url of simpleProxyInstances) {
+      try {
+        console.log(`[Stream] Trying direct YouTube URL: ${url}`);
+        
+        // Try to get the page and extract stream info
+        const pageRes = await fetch(url, {
+          headers: requestOptions.headers,
+          signal: AbortSignal.timeout(10000),
+        });
+        
+        if (!pageRes.ok) {
+          console.log(`[Stream] Direct YouTube failed with status: ${pageRes.status}`);
+          continue;
+        }
+        
+        const pageText = await pageRes.text();
+        console.log(`[Stream] Got YouTube page, length: ${pageText.length}`);
+        
+        // Look for player config in the page
+        const playerConfigMatch = pageText.match(/var ytInitialPlayerResponse = ({.+?});/);
+        if (playerConfigMatch) {
+          try {
+            const playerConfig = JSON.parse(playerConfigMatch[1]);
+            console.log(`[Stream] Found player config`);
+            
+            const streamingData = playerConfig?.streamingData;
+            if (streamingData?.adaptiveFormats) {
+              const audioFormats = streamingData.adaptiveFormats.filter((f: { mimeType?: string; url?: string }) => 
+                f.mimeType?.includes('audio') && f.url
+              );
+              
+              if (audioFormats.length > 0) {
+                console.log(`[Stream] Found ${audioFormats.length} audio formats from direct YouTube`);
+                
+                // Prefer mp4/m4a, then highest bitrate
+                const preferred = audioFormats.find((f: { mimeType?: string }) => f.mimeType?.includes('audio/mp4')) ||
+                                 audioFormats.find((f: { codec?: string }) => f.codec?.includes('mp4a')) ||
+                                 audioFormats.sort((a: { bitrate?: number }, b: { bitrate?: number }) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+
+                if (preferred?.url) {
+                  console.log(`[Stream] Using direct YouTube audio stream: ${preferred.mimeType}, bitrate: ${preferred.bitrate}`);
+                  
+                  const upstreamHeaders: Record<string, string> = {
+                    'user-agent': requestOptions.headers['user-agent'],
+                    'accept-language': requestOptions.headers['accept-language'],
+                  };
+                  const clientRange = req.headers.get('range');
+                  if (clientRange) upstreamHeaders['range'] = clientRange;
+
+                  const upstream = await fetch(preferred.url, {
+                    headers: upstreamHeaders,
+                    redirect: 'follow',
+                    signal: AbortSignal.timeout(15000),
+                  });
+
+                  if (!upstream.ok) {
+                    console.log(`[Stream] Direct YouTube upstream fetch failed: ${upstream.status}`);
+                    continue;
+                  }
+
+                  const contentType = upstream.headers.get('content-type') || preferred.mimeType || 'audio/mpeg';
+                  const headers = new Headers({
+                    'Content-Type': contentType,
+                    'Cache-Control': 'no-store',
+                    'Accept-Ranges': upstream.headers.get('accept-ranges') || 'bytes',
+                    'X-Content-Type-Options': 'nosniff',
+                    'Content-Disposition': 'inline',
+                  });
+                  const cr = upstream.headers.get('content-range');
+                  if (cr) headers.set('Content-Range', cr);
+                  const cl = upstream.headers.get('content-length');
+                  if (cl) headers.set('Content-Length', cl);
+
+                  console.log(`[Stream] Successfully proxying from direct YouTube`);
+                  return new NextResponse(upstream.body as ReadableStream<Uint8Array>, {
+                    status: upstream.status,
+                    headers,
+                  });
+                }
+              }
+            }
+          } catch (parseErr) {
+            console.log(`[Stream] Failed to parse player config:`, parseErr);
+          }
+        }
+      } catch (err) {
+        console.log(`[Stream] Direct YouTube error:`, err);
+        continue;
+      }
+    }
+
+
+    // Approach 2: Try YouTube-DL API (most reliable)
     const youtubeDlInstances = [
       'https://api.cobalt.tools',
       'https://co.wuk.sh',
@@ -118,7 +215,7 @@ export async function GET(
       }
     }
 
-    // Approach 2: Try Invidious API (more reliable for serverless)
+    // Approach 3: Try Invidious API (more reliable for serverless)
     const invidiousInstances = [
       'https://inv.riverside.rocks',
       'https://invidious.flokinet.to',
@@ -198,7 +295,7 @@ export async function GET(
       }
     }
 
-    // Approach 3: Try Piped API as fallback
+    // Approach 4: Try Piped API as fallback
     const pipedInstances = [
       'https://pipedapi.kavin.rocks',
       'https://piped.video',
@@ -277,10 +374,12 @@ export async function GET(
       }
     }
 
-    // Approach 4: Fallback to ytdl with better error handling
+    // Approach 5: Fallback to ytdl with better error handling
     console.log(`[Stream] All proxy instances failed, trying ytdl fallback`);
     try {
-      const info = await ytdl.getInfo(videoId, { requestOptions });
+      const info = await ytdl.getInfo(videoId, { 
+        requestOptions,
+      });
       if (!info || !info.videoDetails) {
         console.log(`[Stream] ytdl: Video not found`);
         return NextResponse.json({ error: 'Video not found' }, { status: 404 });
