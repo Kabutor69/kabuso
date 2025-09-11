@@ -100,14 +100,13 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     setState(prev => ({ ...prev, error }));
   }, []);
 
-  // Initialize audio element
+  // Configure audio element once mounted
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.volume = state.volume;
+    if (audioRef.current) {
+      audioRef.current.volume = state.isMuted ? 0 : state.volume;
       audioRef.current.preload = 'metadata';
     }
-  }, []);
+  }, [state.volume, state.isMuted]);
 
   const playTrack = useCallback((track: Track, addToQueue = true, playNow = true) => {
     setState(prev => {
@@ -470,6 +469,68 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
   }, []);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      // Avoid inputs/textareas
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return;
+
+      // Space: play/pause
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+        return;
+      }
+
+      // ArrowRight/Left: seek +/- 5s
+      if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        if (audioRef.current) seek(Math.min((audioRef.current.currentTime || 0) + 5, state.duration));
+        return;
+      }
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        if (audioRef.current) seek(Math.max((audioRef.current.currentTime || 0) - 5, 0));
+        return;
+      }
+
+      // ArrowUp/Down: volume +/- 5%
+      if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        setVolume(Math.min(1, state.volume + 0.05));
+        return;
+      }
+      if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        setVolume(Math.max(0, state.volume - 0.05));
+        return;
+      }
+
+      // N/P: next/previous
+      if (e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        playNext();
+        return;
+      }
+      if (e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        playPrevious();
+        return;
+      }
+
+      // M: mute
+      if (e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        toggleMute();
+      }
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [state.volume, state.duration, togglePlay, playNext, playPrevious, toggleMute, seek, setVolume]);
 
   return (
     <AudioContext.Provider

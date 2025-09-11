@@ -36,7 +36,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #eab308;
+  background: #22d3ee; /* cyan-400 */
   cursor: pointer;
   border: 2px solid #000;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -45,14 +45,14 @@
 
 .slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);
+  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
 }
 
 .slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #eab308;
+  background: #22d3ee; /* cyan-400 */
   cursor: pointer;
   border: 2px solid #000;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -61,7 +61,7 @@
 
 .slider::-moz-range-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);
+  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
 }
 
 /* Loading animation */
@@ -112,7 +112,7 @@
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #eab308, #f59e0b);
+  background: linear-gradient(135deg, #22d3ee, #06b6d4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -121,7 +121,7 @@
 /* Custom focus styles */
 button:focus-visible,
 input:focus-visible {
-  outline: 2px solid #eab308;
+  outline: 2px solid #22d3ee;
   outline-offset: 2px;
 }
 
@@ -146,17 +146,17 @@ audio {
 /* Dark mode improvements */
 body {
   background-color: #000;
-  color: #fbbf24;
+  color: #a5f3fc; /* cyan-200 */
 }
 
 /* Selection styling */
 ::selection {
-  background: #eab308;
+  background: #22d3ee; /* cyan-400 */
   color: #000;
 }
 
 ::-moz-selection {
-  background: #eab308;
+  background: #22d3ee; /* cyan-400 */
   color: #000;
 }
 
@@ -205,7 +205,7 @@ img {
 
 /* Glow effects */
 .glow-yellow {
-  box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
 }
 
 .glow-red {

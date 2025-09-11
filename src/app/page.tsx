@@ -4,7 +4,9 @@ import { useAudio } from "../context/AudioContext";
 import { useFavorites } from "../context/FavoritesContext";
 import Navbar from "../components/Navbar";
 import Playbar from "../components/Playbar";
+import Skeleton from "../components/Skeleton";
 import { Search, TrendingUp, Music, Clock, Play, Heart, MoreHorizontal } from "lucide-react";
+import TrackCard from "../components/TrackCard";
 
 type Song = {
   videoId: string;
@@ -67,10 +69,21 @@ export default function HomePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading trending music...</p>
+        <div className="px-6 py-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-cyan-500 p-2 rounded-xl" />
+              <div className="h-8 w-40 bg-gray-800/60 rounded" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="rounded-2xl p-4 border border-gray-800 bg-gray-900/40">
+                  <Skeleton className="w-full aspect-square rounded-xl mb-4" />
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <Playbar />
@@ -107,124 +120,26 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white pb-28">
       <Navbar />
-      
-      {/* Hero Section */}
-      <div className="relative overflow-hidden mb-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-transparent"></div>
-        <div className="relative px-6 py-12">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent">
-              Kabuso
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-8">
-              Discover and stream your favorite music for free
-            </p>
-            <div className="flex items-center justify-center gap-4 text-sm text-gray-400">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <span>Trending Now</span>
-              </div>
-              <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
-              <div className="flex items-center gap-2">
-                <Music className="w-4 h-4" />
-                <span>Free Streaming</span>
-              </div>
-              <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span>24/7 Available</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Trending Section */}
+      {/* Heading + Grid */}
       <div className="px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-3 mb-6">
             <TrendingUp className="w-6 h-6 text-cyan-400" />
-            <h2 className="text-3xl font-bold">Trending Now</h2>
-            <div className="flex-1 h-px bg-gradient-to-r from-cyan-400/50 to-transparent"></div>
+            <h2 className="text-2xl font-bold">Trending</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {songs.map((song, index) => (
-              <div
+              <TrackCard
                 key={song.videoId}
-                className="group bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 hover:bg-gray-800/70 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20 border border-gray-700/50"
-              >
-                <div className="relative mb-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={song.thumbnail} 
-                    alt={song.title} 
-                    className="w-full aspect-square rounded-xl object-cover shadow-lg"
-                  />
-                  <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <button
-                      onClick={() => playTrack(song)}
-                      className="bg-cyan-500 hover:bg-cyan-400 text-black p-3 rounded-full shadow-lg transform hover:scale-110 transition-all duration-200"
-                    >
-                      <Play className="w-6 h-6 ml-1" />
-                    </button>
-                  </div>
-                  <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-semibold">
-                    #{index + 1}
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="font-bold text-lg line-clamp-2 group-hover:text-cyan-400 transition-colors" title={song.title}>
-                    {song.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm line-clamp-1" title={song.artists}>
-                    {song.artists}
-                  </p>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center gap-4">
-                      {song.duration && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-700/40 text-gray-300 font-mono">
-                          <Clock className="w-3 h-3" />
-                          {formatDuration(song.duration)}
-                        </span>
-                      )}
-                      {song.views && (
-                        <span>{formatViews(song.views)}</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
-                      onClick={() => playTrack(song)}
-                      className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Play className="w-4 h-4" />
-                      Play
-                    </button>
-                    <button
-                      onClick={() => addToQueue(song)}
-                      className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
-                      title="Add to queue"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => toggleFavorite(song)}
-                      className={`p-2 transition-colors ${
-                        isFavorite(song.videoId) 
-                          ? 'text-red-400 hover:text-red-300' 
-                          : 'text-gray-400 hover:text-red-400'
-                      }`}
-                      title={isFavorite(song.videoId) ? "Remove from favorites" : "Add to favorites"}
-                    >
-                      <Heart className={`w-4 h-4 ${isFavorite(song.videoId) ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+                track={song}
+                indexBadge={`#${index + 1}`}
+                onPlay={() => playTrack(song)}
+                onAddToQueue={() => addToQueue(song)}
+                isFavorite={isFavorite(song.videoId)}
+                onToggleFavorite={() => toggleFavorite(song)}
+                showMeta
+              />
             ))}
           </div>
 
@@ -235,29 +150,8 @@ export default function HomePage() {
               <p className="text-gray-500">Try refreshing the page or check back later</p>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Quick Actions */}
-      <div className="px-6 mt-16 mb-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/10 border border-cyan-500/20 rounded-2xl p-6 text-center">
-              <Search className="w-8 h-8 text-cyan-400 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold mb-2">Search Music</h3>
-              <p className="text-gray-400 text-sm">Find any song, artist, or album instantly</p>
-            </div>
-            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-2xl p-6 text-center">
-              <Music className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold mb-2">High Quality</h3>
-              <p className="text-gray-400 text-sm">Stream in the best audio quality available</p>
-            </div>
-            <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-2xl p-6 text-center">
-              <Heart className="w-8 h-8 text-green-400 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold mb-2">Free Forever</h3>
-              <p className="text-gray-400 text-sm">No subscriptions, no ads, completely free</p>
-            </div>
-          </div>
+          <div className="h-24" />
         </div>
       </div>
       

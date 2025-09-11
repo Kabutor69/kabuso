@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAudio, type Track } from "../../context/AudioContext";
 import { useFavorites } from "../../context/FavoritesContext";
 import Navbar from "../../components/Navbar";
@@ -15,6 +16,7 @@ import {
   Clock,
   Heart
 } from "lucide-react";
+import TrackCard from "../../components/TrackCard";
 
 // Skeleton kept for potential future use
 
@@ -101,6 +103,7 @@ export default function SearchPage() {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
 
   // Load search history from localStorage
   useEffect(() => {
@@ -116,6 +119,18 @@ export default function SearchPage() {
   useEffect(() => {
     searchInputRef.current?.focus();
   }, []);
+
+  // If ?q= is present, auto-run search
+  useEffect(() => {
+    const initialQ = (searchParams?.get('q') || '').trim();
+    if (initialQ) {
+      setQuery(initialQ);
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        form?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }, 0);
+    }
+  }, [searchParams]);
 
   const saveToSearchHistory = (query: string) => {
     if (!query.trim()) return;
@@ -187,18 +202,12 @@ export default function SearchPage() {
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-cyan-400 pb-32">
       <Navbar />
       
-      {/* Hero Section */}
-      <div className="px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="bg-cyan-500 p-2 rounded-xl">
-              <SearchIcon className="w-6 h-6 text-black" />
-            </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent">
-              Search Music
-            </h1>
-          </div>
-          <p className="text-gray-400 text-sm mb-8">Find any song from YouTube Music&apos;s vast library</p>
+      {/* Header + Search */}
+      <div className="px-6 py-6">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <SearchIcon className="w-5 h-5 text-cyan-400" /> Search
+          </h1>
 
           {/* Search Form */}
           <form onSubmit={handleSearch} className="relative mb-8">
@@ -269,7 +278,7 @@ export default function SearchPage() {
 
       {/* Search Results */}
       <div className="px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Results Header */}
           {hasSearched && !isSearching && tracks.length > 0 && (
             <div className="flex items-center justify-between mb-6">
@@ -305,16 +314,12 @@ export default function SearchPage() {
 
           {/* Loading State */}
           {isSearching && (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="animate-pulse bg-gray-800 bg-opacity-50 rounded-xl p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-gray-700 w-16 h-16 rounded-lg"></div>
-                    <div className="flex-1">
-                      <div className="bg-gray-700 h-4 rounded mb-2"></div>
-                      <div className="bg-gray-700 h-3 rounded w-3/4"></div>
-                    </div>
-                  </div>
+                <div key={i} className="rounded-2xl p-4 border border-gray-800 bg-gray-900/40 animate-pulse">
+                  <div className="w-full aspect-square rounded-xl mb-4 bg-gray-800/60" />
+                  <div className="h-5 w-3/4 mb-2 bg-gray-800/60 rounded" />
+                  <div className="h-4 w-1/2 bg-gray-800/60 rounded" />
                 </div>
               ))}
             </div>
@@ -322,17 +327,18 @@ export default function SearchPage() {
 
           {/* Search Results */}
           {!isSearching && !error && tracks.length > 0 && (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {tracks.map((track) => (
-                <SearchResultCard
+                <TrackCard
                   key={track.videoId}
                   track={track}
+                  isActive={currentTrack?.videoId === track.videoId}
+                  isPlaying={isPlaying}
                   onPlay={() => playTrack(track, true, true)}
                   onAddToQueue={() => addToQueue(track)}
-                  isCurrentTrack={currentTrack?.videoId === track.videoId}
-                  isPlaying={isPlaying}
                   isFavorite={isFavorite(track.videoId)}
                   onToggleFavorite={() => toggleFavorite(track)}
+                  showMeta
                 />
               ))}
             </div>
@@ -351,21 +357,12 @@ export default function SearchPage() {
 
           {/* Default State */}
           {!hasSearched && !isSearching && (
-            <div className="text-center py-16">
-              <div className="bg-gray-800 bg-opacity-50 rounded-2xl p-12 max-w-md mx-auto">
-                <SearchIcon className="w-20 h-20 text-gray-600 mx-auto mb-6" />
-                <h3 className="text-2xl font-bold text-gray-300 mb-4">Search for Music</h3>
-                <p className="text-gray-500 mb-6">
-                  Discover millions of songs from YouTube Music
-                </p>
-                <div className="text-left space-y-2 text-sm text-gray-500">
-                  <p>• Search by song title</p>
-                  <p>• Find artists and albums</p>
-                  <p>• Discover new music</p>
-                </div>
-              </div>
+            <div className="text-center py-16 text-gray-500">
+              Start searching for songs
             </div>
           )}
+
+          <div className="h-24" />
         </div>
       </div>
 

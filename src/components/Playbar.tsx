@@ -1,6 +1,9 @@
 "use client";
 import { useAudio } from "../context/AudioContext";
+import { useFavorites } from "../context/FavoritesContext";
 import { useState } from "react";
+import QueueDrawer from "./QueueDrawer";
+import NowPlayingSheet from "./NowPlayingSheet";
 import {
   Play,
   Pause,
@@ -43,11 +46,15 @@ export default function Playbar() {
     error,
     setError,
   } = useAudio();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [showQueue, setShowQueue] = useState(false);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [showNowPlaying, setShowNowPlaying] = useState(false);
 
   if (!currentTrack) return null;
+
+  const currentIsFavorite = isFavorite(currentTrack.videoId);
 
   const formatTime = (t: number) => {
     if (isNaN(t) || t === 0) return "0:00";
@@ -117,7 +124,7 @@ export default function Playbar() {
                 </div>
               )}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1" onClick={() => setShowNowPlaying(true)}>
               <p className="font-semibold text-sm truncate" title={currentTrack.title}>
                 {currentTrack.title}
               </p>
@@ -125,8 +132,17 @@ export default function Playbar() {
                 {currentTrack.artists}
               </p>
             </div>
-            <button className="text-gray-400 hover:text-cyan-400 transition-colors">
-              <Heart className="w-5 h-5" />
+            <button
+              aria-label={currentIsFavorite ? "Remove from favorites" : "Add to favorites"}
+              title={currentIsFavorite ? "Remove from favorites" : "Add to favorites"}
+              onClick={() => toggleFavorite(currentTrack)}
+              className={`transition-colors ${
+                currentIsFavorite
+                  ? "text-red-400 hover:text-red-300"
+                  : "text-gray-400 hover:text-red-400"
+              }`}
+            >
+              <Heart className={`w-5 h-5 ${currentIsFavorite ? "fill-current" : ""}`} />
             </button>
           </div>
 
@@ -134,11 +150,12 @@ export default function Playbar() {
           <div className="flex flex-col items-center w-full md:w-1/3 max-w-md">
             <div className="flex gap-4 items-center mb-3">
               <button 
+                aria-label={`Playback mode: ${playbackMode}`}
+                title={`Playback mode: ${playbackMode}`}
                 onClick={cyclePlaybackMode}
                 className={`transition-colors ${
                   playbackMode !== 'normal' ? 'text-cyan-400' : 'text-gray-500 hover:text-gray-300'
                 }`}
-                title={`Playback mode: ${playbackMode}`}
               >
                 {getPlaybackIcon()}
               </button>
@@ -152,6 +169,8 @@ export default function Playbar() {
               </button>
               
               <button
+                aria-label={isPlaying ? "Pause" : "Play"}
+                title={isPlaying ? "Pause" : "Play"}
                 onClick={togglePlay}
                 className="bg-cyan-500 text-black px-3 py-3 rounded-full hover:bg-cyan-400 transition-all transform hover:scale-105 shadow-lg"
                 disabled={isLoading}
@@ -166,6 +185,8 @@ export default function Playbar() {
               </button>
               
               <button 
+                aria-label="Next"
+                title="Next"
                 onClick={playNext}
                 className="text-gray-300 hover:text-cyan-400 transition-colors"
               >
@@ -213,7 +234,7 @@ export default function Playbar() {
               onMouseEnter={() => setShowVolumeSlider(true)}
               onMouseLeave={() => setShowVolumeSlider(false)}
             >
-              <button onClick={toggleMute} className="text-gray-300 hover:text-cyan-400 transition-colors">
+              <button aria-label={isMuted ? "Unmute" : "Mute"} title={isMuted ? "Unmute" : "Mute"} onClick={toggleMute} className="text-gray-300 hover:text-cyan-400 transition-colors">
                 {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </button>
               
@@ -253,92 +274,30 @@ export default function Playbar() {
         </div>
       </div>
 
-      {/* Queue Sidebar */}
-      {showQueue && (
-        <div className="fixed bottom-28 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-96 bg-gray-900 text-cyan-400 rounded-xl shadow-2xl z-50 border border-gray-700 overflow-hidden">
-          <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-            <h3 className="font-bold">Queue ({queue.length})</h3>
-            <div className="flex gap-2">
-              <button 
-                onClick={shuffleQueue}
-                className="text-gray-400 hover:text-cyan-400 transition-colors"
-                title="Shuffle queue"
-              >
-                <Shuffle className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={clearQueue}
-                className="text-gray-400 hover:text-red-400 transition-colors"
-                title="Clear queue"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          
-          <div className="overflow-y-auto max-h-64">
-            {queue.map((track, index) => (
-              <div
-                key={`${track.videoId}-${index}`}
-                className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-800 transition-colors border-l-2 ${
-                  index === currentIndex 
-                    ? "bg-gray-800 border-cyan-500" 
-                    : "border-transparent"
-                }`}
-                onClick={() => playFromQueue(index)}
-              >
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={track.thumbnail} 
-                    alt={track.title} 
-                    className="w-12 h-12 rounded-lg" 
-                  />
-                  {index === currentIndex && (
-                    <div className="absolute inset-0 bg-cyan-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                      <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" title={track.title}>
-                    {track.title}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate" title={track.artists}>
-                    {track.artists}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-1">
-                  {index === currentIndex && (
-                    <div className="text-cyan-500">
-                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </div>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFromQueue(track.videoId);
-                    }}
-                    className="text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-            
-            {queue.length === 0 && (
-              <div className="p-8 text-center text-gray-500">
-                <List className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Your queue is empty</p>
-                <p className="text-xs mt-1">Add songs to start listening</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <QueueDrawer
+        isOpen={showQueue}
+        onClose={() => setShowQueue(false)}
+        queue={queue}
+        currentIndex={currentIndex}
+        isPlaying={isPlaying}
+        playFromQueue={playFromQueue}
+        removeFromQueue={removeFromQueue}
+        clearQueue={clearQueue}
+        shuffleQueue={shuffleQueue}
+      />
+
+      <NowPlayingSheet
+        isOpen={showNowPlaying}
+        onClose={() => setShowNowPlaying(false)}
+        track={currentTrack}
+        isPlaying={isPlaying}
+        progress={progress}
+        duration={duration}
+        onTogglePlay={togglePlay}
+        onSeek={seek}
+        onNext={playNext}
+        onPrev={playPrevious}
+      />
 
       {/* Mobile Queue Overlay */}
       {showQueue && (

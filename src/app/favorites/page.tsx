@@ -4,6 +4,7 @@ import { useAudio } from "../../context/AudioContext";
 import Navbar from "../../components/Navbar";
 import Playbar from "../../components/Playbar";
 import { Heart, Play, MoreHorizontal, Music, Trash2, Clock } from "lucide-react";
+import TrackCard from "../../components/TrackCard";
 
 export default function FavoritesPage() {
   const { favorites, removeFromFavorites } = useFavorites();
@@ -95,83 +96,17 @@ export default function FavoritesPage() {
           {/* Favorites Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {favorites.map((track) => (
-              <div
+              <TrackCard
                 key={track.videoId}
-                className="group bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 hover:bg-gray-800/70 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20 border border-gray-700/50"
-              >
-                <div className="relative mb-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={track.thumbnail} 
-                    alt={track.title} 
-                    className="w-full aspect-square rounded-xl object-cover shadow-lg"
-                  />
-                  <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <button
-                      onClick={() => playTrack(track)}
-                      className="bg-cyan-500 hover:bg-cyan-400 text-black p-3 rounded-full shadow-lg transform hover:scale-110 transition-all duration-200"
-                    >
-                      <Play className="w-6 h-6 ml-1" />
-                    </button>
-                  </div>
-                  {currentTrack?.videoId === track.videoId && (
-                    <div className="absolute top-2 left-2 bg-cyan-500 text-black rounded-full px-2 py-1 text-xs font-semibold flex items-center gap-1">
-                      {isPlaying ? (
-                        <>
-                          <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
-                          Now Playing
-                        </>
-                      ) : (
-                        <>
-                          <Music className="w-3 h-3" />
-                          Paused
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="font-bold text-lg line-clamp-2 group-hover:text-cyan-400 transition-colors" title={track.title}>
-                    {track.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm line-clamp-1" title={track.artists}>
-                    {track.artists}
-                  </p>
-                  {track.duration && (
-                    <div className="text-xs text-gray-500">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-700/40 text-gray-300 font-mono">
-                        <Clock className="w-3 h-3" />
-                        {formatDuration(track.duration)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
-                      onClick={() => playTrack(track)}
-                      className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Play className="w-4 h-4" />
-                      Play
-                    </button>
-                    <button
-                      onClick={() => addToQueue(track)}
-                      className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
-                      title="Add to queue"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => removeFromFavorites(track.videoId)}
-                      className="p-2 text-red-400 hover:text-red-300 transition-colors"
-                      title="Remove from favorites"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+                track={track}
+                isActive={currentTrack?.videoId === track.videoId}
+                isPlaying={isPlaying}
+                onPlay={() => playTrack(track)}
+                onAddToQueue={() => addToQueue(track)}
+                isFavorite={true}
+                onToggleFavorite={() => removeFromFavorites(track.videoId)}
+                showMeta
+              />
             ))}
           </div>
         </div>

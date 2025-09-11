@@ -6,9 +6,9 @@ export const runtime = "nodejs";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id: videoId } = await params;
+  const { id: videoId } = params;
 
   if (!videoId || !/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
     return NextResponse.json(

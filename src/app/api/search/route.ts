@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       title?: string;
       channel?: { name?: string };
       thumbnail?: { url?: string };
-      duration?: { seconds?: number };
+      duration?: number | { seconds?: number };
       views?: number;
       uploadedAt?: string;
     };
@@ -54,7 +54,10 @@ export async function GET(req: NextRequest) {
         title: (video.title as string) || "",
         artists: video.channel?.name || "Unknown Artist",
         thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
-        duration: video.duration?.seconds || 0,
+        // Normalize duration to seconds (handle number or object shape)
+        duration: typeof video.duration === 'number'
+          ? (video.duration > 10000 ? Math.floor(video.duration / 1000) : video.duration)
+          : (video.duration?.seconds || 0),
         views: video.views,
         uploadedAt: video.uploadedAt,
       }));
