@@ -3,24 +3,12 @@ import { useFavorites } from "../../context/FavoritesContext";
 import { useAudio } from "../../context/AudioContext";
 import Navbar from "../../components/Navbar";
 import Playbar from "../../components/Playbar";
-import { Heart, Play, MoreHorizontal, Music, Trash2, Clock } from "lucide-react";
+import { Heart, Play } from "lucide-react";
 import TrackCard from "../../components/TrackCard";
 
 export default function FavoritesPage() {
   const { favorites, removeFromFavorites } = useFavorites();
   const { playTrack, addToQueue, currentTrack, isPlaying } = useAudio();
-
-  const formatDuration = (raw?: number) => {
-    if (!raw || raw < 1) return "0:00";
-    const seconds = Math.floor(raw > 10000 ? raw / 1000 : raw);
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const playAllFavorites = () => {
     if (favorites.length === 0) return;

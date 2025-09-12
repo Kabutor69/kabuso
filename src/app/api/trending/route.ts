@@ -1,107 +1,68 @@
-import { NextResponse } from "next/server";
-import { YouTube } from "youtube-sr";
+import { NextResponse } from 'next/server';
+import YouTube from 'youtube-sr';
 
-export const runtime = "nodejs";
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
-// Cache trending results for 30 minutes
-type YouTubeVideo = {
-  id?: string;
-  title?: string;
-  channel?: { name?: string };
-  thumbnail?: { url?: string };
-  duration?: number | { seconds?: number };
-  views?: number;
-  uploadedAt?: string;
-};
-let cachedTrending: Array<{
+type Track = {
   videoId: string;
   title: string;
   artists: string;
-  thumbnail: string;
   duration: number;
-  views?: number;
-  uploadedAt?: string;
-}> = [];
-let lastTrendingFetch = 0;
-const TRENDING_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  views: number;
+  thumbnail: string;
+};
 
-export async function GET() {
-  const now = Date.now();
-  
-  // Return cached results if still fresh
-  if (cachedTrending.length > 0 && (now - lastTrendingFetch) < TRENDING_CACHE_DURATION) {
-    return NextResponse.json(cachedTrending);
-  }
+type TrendingCache = { data: { tracks: Track[] }; timestamp: number } | null;
 
+// Simple cache
+let cache: TrendingCache = null;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+export async function GET(req: Request) {
   try {
-    // Try multiple search strategies for trending content
-    const searches = [
-      "trending songs 2024",
-      "popular music",
-      "top hits",
-      "viral songs",
-      "latest music",
-      "new releases"
-    ];
+    const { searchParams } = new URL(req.url);
+    const limitParam = parseInt(searchParams.get('limit') || '20', 10);
+    const limit = Math.max(1, Math.min(50, isNaN(limitParam) ? 20 : limitParam));
 
-    let allResults: YouTubeVideo[] = [];
-    
-    for (const searchTerm of searches) {
-      try {
-        const results = await YouTube.search(searchTerm, { 
-          type: "video",
-          limit: 10 
-        });
-        if (results && Array.isArray(results)) {
-          allResults = [...allResults, ...results];
-        }
-      } catch (searchErr) {
-        console.warn(`Search failed for "${searchTerm}":`, searchErr);
-      }
+    // Return cached data if still fresh and limit unchanged
+    if (cache && Date.now() - cache.timestamp < CACHE_DURATION && Array.isArray(cache.data?.tracks) && cache.data.tracks.length >= limit) {
+      const sliced = { tracks: cache.data.tracks.slice(0, limit) };
+      return NextResponse.json(sliced);
     }
 
-    // Remove duplicates and filter valid tracks
-    const uniqueTracks = new Map<string, YouTubeVideo>();
-    allResults.forEach((video) => {
-      if (video?.id && 
-          /^[a-zA-Z0-9-_]{11}$/.test(video.id) && 
-          !uniqueTracks.has(video.id)) {
-        uniqueTracks.set(video.id, video);
-      }
+    const results = await YouTube.search('trending music 2024', {
+      type: 'video',
+      limit: 60,
     });
 
-    const songs = (Array.from(uniqueTracks.values()) as YouTubeVideo[])
-      .slice(0, 24) // Top 24 trending
-      .map((video) => ({
-        videoId: (video.id as string),
-        title: (video.title as string) || "",
-        artists: video.channel?.name || "Unknown Artist",
-        thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
-        // Normalize duration to seconds
-        duration: typeof video.duration === 'number' 
-          ? (video.duration > 10000 ? Math.floor(video.duration / 1000) : video.duration)
-          : (video.duration?.seconds || 0),
-        views: video.views,
-        uploadedAt: video.uploadedAt,
-      }));
+    const seen = new Set<string>();
+    const tracks: Track[] = results
+      .filter(video => !!video.id)
+      .map(video => ({
+        videoId: video.id!,
+        title: video.title || 'Unknown Title',
+        artists: video.channel?.name || 'Unknown Artist',
+        duration: Math.floor((video.duration || 0) / 1000),
+        views: video.views || 0,
+        thumbnail: video.thumbnail?.url || '',
+      }))
+      .filter(t => {
+        if (seen.has(t.videoId)) return false;
+        seen.add(t.videoId);
+        return true;
+      });
 
-    // Cache results
-    cachedTrending = songs;
-    lastTrendingFetch = now;
+    const data = { tracks };
+    cache = { data, timestamp: Date.now() };
 
-    return NextResponse.json(songs);
+    return NextResponse.json({ tracks: tracks.slice(0, limit) });
 
-  } catch (err) {
-    console.error("Trending fetch error:", err);
-    
-    // Return cached results if available, even if stale
-    if (cachedTrending.length > 0) {
-      return NextResponse.json(cachedTrending);
+  } catch (error) {
+    console.error('Trending error:', error);
+    if (cache) {
+      return NextResponse.json(cache.data);
     }
-    
-    return NextResponse.json(
-      { error: "Failed to fetch trending songs" }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to load trending songs' }, { status: 500 });
   }
 }

@@ -1,74 +1,47 @@
-import { NextRequest, NextResponse } from "next/server";
-import { YouTube } from "youtube-sr";
+import { NextRequest, NextResponse } from 'next/server';
+import YouTube from 'youtube-sr';
 
-export const runtime = "nodejs";
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const query = searchParams.get("q")?.trim();
+  const query = searchParams.get('q');
+  const limitParam = parseInt(searchParams.get('limit') || '20', 10);
+  const limit = Math.max(1, Math.min(50, isNaN(limitParam) ? 20 : limitParam));
 
-  if (!query) {
-    return NextResponse.json(
-      { error: "Search query is required" }, 
-      { status: 400 }
-    );
-  }
-
-  if (query.length < 2) {
-    return NextResponse.json(
-      { error: "Search query must be at least 2 characters" }, 
-      { status: 400 }
-    );
+  if (!query || query.trim().length === 0) {
+    return NextResponse.json({ error: 'Search query is required' }, { status: 400 });
   }
 
   try {
-    // Search for videos using youtube-sr
-    const results = await YouTube.search(query, { 
-      type: "video",
-      limit: 50 
+    const results = await YouTube.search(query, {
+      type: 'video',
+      limit: 60,
     });
-    
-    if (!results || !Array.isArray(results)) {
-      return NextResponse.json([]);
-    }
 
-    // Filter and format results
-    type YouTubeVideo = {
-      id?: string;
-      title?: string;
-      channel?: { name?: string };
-      thumbnail?: { url?: string };
-      duration?: number | { seconds?: number };
-      views?: number;
-      uploadedAt?: string;
-    };
-    const songs = (results as YouTubeVideo[])
-      .filter((video) => 
-        Boolean(video) && 
-        Boolean(video.id) && 
-        /^[a-zA-Z0-9-_]{11}$/.test(video.id as string) &&
-        Boolean(video.title)
-      )
-      .map((video) => ({
-        videoId: video.id as string,
-        title: (video.title as string) || "",
-        artists: video.channel?.name || "Unknown Artist",
-        thumbnail: video.thumbnail?.url || "/placeholder-music.jpg",
-        // Normalize duration to seconds (handle number or object shape)
-        duration: typeof video.duration === 'number'
-          ? (video.duration > 10000 ? Math.floor(video.duration / 1000) : video.duration)
-          : (video.duration?.seconds || 0),
-        views: video.views,
-        uploadedAt: video.uploadedAt,
-      }));
+    const seen = new Set<string>();
+    const tracks = results
+      .filter(video => !!video.id)
+      .map(video => ({
+        videoId: video.id!,
+        title: video.title || 'Unknown Title',
+        artists: video.channel?.name || 'Unknown Artist',
+        duration: Math.floor((video.duration || 0) / 1000),
+        views: video.views || 0,
+        thumbnail: video.thumbnail?.url || '',
+      }))
+      .filter(t => {
+        if (seen.has(t.videoId)) return false;
+        seen.add(t.videoId);
+        return true;
+      })
+      .slice(0, limit);
 
-    return NextResponse.json(songs);
+    return NextResponse.json({ tracks });
 
-  } catch (err) {
-    console.error("Search error:", err);
-    return NextResponse.json(
-      { error: "Search temporarily unavailable" }, 
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error('Search error:', error);
+    return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }
 }

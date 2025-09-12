@@ -48,7 +48,7 @@ export default function TrackCard({
 
   return (
     <div
-      className="group bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 hover:bg-gray-800/70 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-cyan-500/20 border border-gray-700/50"
+      className="group bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 hover:bg-gray-800/70 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-cyan-500/20 border border-gray-700/50 h-full flex flex-col"
       role="article"
       aria-label={`${track.title} by ${track.artists}`}
     >
@@ -91,29 +91,31 @@ export default function TrackCard({
         )}
       </div>
 
-      <div className="space-y-2">
-        <h3 className="font-bold text-lg line-clamp-2 group-hover:text-cyan-400 transition-colors" title={track.title}>
-          {track.title}
-        </h3>
-        <p className="text-gray-400 text-sm line-clamp-1" title={track.artists}>
-          {track.artists}
-        </p>
+      <div className="flex flex-col flex-1">
+        <div className="flex-1 space-y-2">
+          <h3 className="font-bold text-lg line-clamp-2 group-hover:text-cyan-400 transition-colors min-h-[3.5rem] flex items-start" title={track.title}>
+            {track.title}
+          </h3>
+          <p className="text-gray-400 text-sm line-clamp-1" title={track.artists}>
+            {track.artists}
+          </p>
 
-        {showMeta && (track.duration || track.views) && (
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-4">
-              {track.duration && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-700/40 text-gray-300 font-mono">
-                  <Clock className="w-3 h-3" />
-                  {durationText(track.duration)}
-                </span>
-              )}
-              {track.views && <span>{viewsText(track.views)}</span>}
+          {showMeta && (track.duration || track.views) && (
+            <div className="flex items-center justify-between text-xs text-gray-500 min-h-[1.5rem]">
+              <div className="flex items-center gap-4">
+                {track.duration && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-700/40 text-gray-300 font-mono">
+                    <Clock className="w-3 h-3" />
+                    {durationText(track.duration)}
+                  </span>
+                )}
+                {track.views && <span>{viewsText(track.views)}</span>}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        <div className="flex items-center gap-2 pt-2">
+        <div className="flex items-center gap-2 pt-2 mt-auto">
           <button
             onClick={onPlay}
             className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"

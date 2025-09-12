@@ -58,9 +58,14 @@ export default function Playbar() {
 
   const formatTime = (t: number) => {
     if (isNaN(t) || t === 0) return "0:00";
-    const m = Math.floor(t / 60);
-    const s = Math.floor(t % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
+    const hours = Math.floor(t / 3600);
+    const minutes = Math.floor((t % 3600) / 60);
+    const seconds = Math.floor(t % 60).toString().padStart(2, "0");
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds}`;
+    }
+    return `${minutes}:${seconds}`;
   };
 
   const getPlaybackIcon = () => {
@@ -85,15 +90,19 @@ export default function Playbar() {
     <>
       {/* Error Toast */}
       {error && (
-        <div className="fixed top-20 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-slide-in">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{error}</span>
-            <button 
-              onClick={() => setError(null)} 
-              className="hover:bg-red-600 rounded p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl shadow-xl backdrop-blur-md min-w-[260px] text-center">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm font-medium">{error}</span>
+              <button 
+                onClick={() => setError(null)} 
+                className="text-red-300 hover:text-red-200 transition-colors"
+                aria-label="Dismiss"
+                title="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -8,8 +8,6 @@ import Playbar from "../../components/Playbar";
 import { 
   Search as SearchIcon, 
   Play, 
-  Plus, 
-  Loader2, 
   Music,
   AlertCircle,
   X,
@@ -20,79 +18,6 @@ import TrackCard from "../../components/TrackCard";
 
 // Skeleton kept for potential future use
 
-const SearchResultCard = ({ 
-  track, 
-  onPlay, 
-  onAddToQueue, 
-  isCurrentTrack, 
-  isPlaying,
-  isFavorite,
-  onToggleFavorite
-}: { 
-  track: Track; 
-  onPlay: () => void; 
-  onAddToQueue: () => void;
-  isCurrentTrack: boolean;
-  isPlaying: boolean;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
-}) => (
-  <div className="group relative bg-gray-900 bg-opacity-50 rounded-xl p-4 hover:bg-opacity-70 transition-all duration-200 border border-gray-800 hover:border-gray-700">
-    <div className="flex items-center gap-4">
-      <div className="relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img 
-          src={track.thumbnail} 
-          alt={track.title} 
-          className="w-16 h-16 rounded-lg object-cover" 
-        />
-        {isCurrentTrack && (
-          <div className="absolute inset-0 bg-cyan-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-            <div className={`w-3 h-3 bg-cyan-500 rounded-full ${isPlaying ? 'animate-pulse' : ''}`} />
-          </div>
-        )}
-      </div>
-      
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-cyan-400 truncate mb-1" title={track.title}>
-          {track.title}
-        </h3>
-        <p className="text-gray-400 text-sm truncate" title={track.artists}>
-          {track.artists}
-        </p>
-      </div>
-      
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={onToggleFavorite}
-          className={`p-2 rounded-lg transition-colors ${
-            isFavorite 
-              ? 'text-red-400 hover:text-red-300 bg-red-500/10' 
-              : 'text-gray-400 hover:text-red-400 bg-gray-700 hover:bg-gray-600'
-          }`}
-          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-        </button>
-        <button
-          onClick={onAddToQueue}
-          className="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition-colors"
-          title="Add to queue"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
-        <button
-          onClick={onPlay}
-          className="bg-cyan-500 hover:bg-cyan-400 text-black p-2 rounded-lg transition-colors"
-          title="Play now"
-        >
-          <Play className="w-4 h-4 ml-0.5" />
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
 export default function SearchPage() {
   const { playTrack, addToQueue, currentTrack, isPlaying } = useAudio();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -102,6 +27,8 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [limit, setLimit] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
@@ -153,19 +80,37 @@ export default function SearchPage() {
     saveToSearchHistory(query.trim());
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&limit=${limit}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
-      setTracks(data);
+      if (data?.error) throw new Error(data.error);
+      const list = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
+      setTracks(list);
     } catch (err) {
       console.error("Search failed:", err);
       setError(err instanceof Error ? err.message : 'Search failed');
       setTracks([]);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!query.trim()) return;
+    try {
+      setIsLoadingMore(true);
+      const newLimit = Math.min(50, limit + 10);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&limit=${newLimit}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
+      setTracks(list);
+      setLimit(newLimit);
+    } catch (err) {
+      console.error('Load more search failed', err);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -199,15 +144,30 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-cyan-400 pb-32">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-cyan-400 pb-32">
       <Navbar />
       
-      {/* Header + Search */}
-      <div className="px-6 py-6">
+      {/* Header */}
+      <div className="px-6 pt-8 pb-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            <SearchIcon className="w-5 h-5 text-cyan-400" /> Search
-          </h1>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="bg-cyan-500 p-2 rounded-xl">
+              <SearchIcon className="w-6 h-6 text-black" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent">
+                Search
+              </h1>
+              <p className="text-gray-400 text-sm">Find your favorite music</p>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-r from-cyan-400/50 to-transparent"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Form */}
+      <div className="px-6 pb-6">
+        <div className="max-w-7xl mx-auto">
 
           {/* Search Form */}
           <form onSubmit={handleSearch} className="relative mb-8">
@@ -232,15 +192,15 @@ export default function SearchPage() {
                 </button>
               )}
               <button 
-                type="submit" 
-                disabled={!query.trim() || isSearching}
+                type={isSearching ? "button" : "submit"}
+                onClick={isSearching ? () => {
+                  setIsSearching(false);
+                  setError(null);
+                } : undefined}
+                disabled={!query.trim() && !isSearching}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-cyan-500 text-black px-6 py-2 rounded-lg hover:bg-cyan-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                {isSearching ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Search'
-                )}
+                {isSearching ? 'Cancel' : 'Search'}
               </button>
             </div>
           </form>
@@ -281,13 +241,15 @@ export default function SearchPage() {
         <div className="max-w-7xl mx-auto">
           {/* Results Header */}
           {hasSearched && !isSearching && tracks.length > 0 && (
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-gray-400 text-sm">
-                Found {tracks.length} results for &quot;{query}&quot;
-              </p>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <p className="text-gray-400 text-sm">
+                  Showing {tracks.length} results for &quot;{query}&quot;
+                </p>
+              </div>
               <button 
                 onClick={playAllResults}
-                className="flex items-center gap-2 bg-cyan-500 text-black px-4 py-2 rounded-lg hover:bg-cyan-400 transition-colors text-sm font-medium"
+                className="flex items-center gap-2 bg-cyan-500 text-black px-6 py-3 rounded-lg hover:bg-cyan-400 transition-colors font-medium shadow-lg hover:shadow-cyan-500/20"
               >
                 <Play className="w-4 h-4 ml-0.5" />
                 Play All
@@ -316,7 +278,7 @@ export default function SearchPage() {
           {isSearching && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="rounded-2xl p-4 border border-gray-800 bg-gray-900/40 animate-pulse">
+                <div key={i} className="rounded-2xl p-4 border border-gray-800/50 bg-gray-900/40 backdrop-blur-sm animate-pulse">
                   <div className="w-full aspect-square rounded-xl mb-4 bg-gray-800/60" />
                   <div className="h-5 w-3/4 mb-2 bg-gray-800/60 rounded" />
                   <div className="h-4 w-1/2 bg-gray-800/60 rounded" />
@@ -328,7 +290,7 @@ export default function SearchPage() {
           {/* Search Results */}
           {!isSearching && !error && tracks.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {tracks.map((track) => (
+              {Array.isArray(tracks) && tracks.map((track) => (
                 <TrackCard
                   key={track.videoId}
                   track={track}
@@ -341,6 +303,18 @@ export default function SearchPage() {
                   showMeta
                 />
               ))}
+            </div>
+          )}
+
+          {!isSearching && !error && tracks.length >= limit && limit < 50 && (
+            <div className="flex justify-center py-8">
+              <button 
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-cyan-500/20"
+              >
+                {isLoadingMore ? 'Loading...' : 'Load more'}
+              </button>
             </div>
           )}
 

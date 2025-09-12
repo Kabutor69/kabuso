@@ -43,14 +43,13 @@ type AudioContextType = AudioState & {
   setPlaybackMode: (mode: PlaybackMode) => void;
   shuffleQueue: () => void;
   setError: (error: string | null) => void;
-  loadRelatedSongs: (videoId: string) => Promise<void>;
+  loadRelatedSongs: (videoId: string, queryHint?: { title?: string; artists?: string }) => Promise<void>;
 };
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   
   const [state, setState] = useState<AudioState>({
     currentTrack: null,
@@ -67,7 +66,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     error: null,
   });
 
-  // Initialize volume from localStorage after component mounts
+  // Initialize volume from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedVolume = localStorage.getItem('kabuso_volume');
@@ -89,24 +88,9 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [state.volume, state.playbackMode]);
 
-  // Apply volume changes to the audio element
-  useEffect(() => {
-    if (audioRef.current && !state.isMuted) {
-      audioRef.current.volume = state.volume;
-    }
-  }, [state.volume, state.isMuted]);
-
   const setError = useCallback((error: string | null) => {
     setState(prev => ({ ...prev, error }));
   }, []);
-
-  // Configure audio element once mounted
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = state.isMuted ? 0 : state.volume;
-      audioRef.current.preload = 'metadata';
-    }
-  }, [state.volume, state.isMuted]);
 
   const playTrack = useCallback((track: Track, addToQueue = true, playNow = true) => {
     setState(prev => {
@@ -214,6 +198,35 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, []);
 
+  // Load related songs based on current track metadata
+  const loadRelatedSongs = useCallback(async (videoId: string, queryHint?: { title?: string; artists?: string }) => {
+    try {
+      const q = [queryHint?.title, queryHint?.artists].filter(Boolean).join(' ');
+      const url = q ? `/api/related/${videoId}?q=${encodeURIComponent(q)}` : `/api/related/${videoId}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const relatedSongs = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
+
+      if (relatedSongs.length > 0) {
+        setState(prev => {
+          const existingIds = new Set<string>([
+            ...prev.queue.map(t => t.videoId),
+            ...prev.history.map(t => t.videoId),
+            prev.currentTrack?.videoId || '',
+          ].filter(Boolean) as string[]);
+          const newSongs = relatedSongs.filter((song: Track) => !existingIds.has(song.videoId));
+          return {
+            ...prev,
+            queue: [...prev.queue, ...newSongs],
+          };
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load related songs', err);
+    }
+  }, []);
+
   const getNextTrack = useCallback((): Track | null => {
     const { queue, currentIndex, playbackMode } = state;
     
@@ -228,7 +241,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
       return availableTracks[randomIndex];
     }
     
-    // Normal or repeat mode
     if (currentIndex < queue.length - 1 && queue[currentIndex + 1]) {
       return queue[currentIndex + 1];
     } else if (playbackMode === 'repeat' && queue[0]) {
@@ -251,24 +263,30 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         error: null,
       }));
     } else {
-      // Fetch related tracks if queue is empty
-      if (state.currentTrack) {
-        try {
-          setState(prev => ({ ...prev, isLoading: true, error: null }));
-          const res = await fetch(`/api/related/${state.currentTrack.videoId}?single=true`);
-          const relatedTrack = await res.json();
-          
-          if (relatedTrack && relatedTrack.videoId) {
-            playTrack(relatedTrack, true, true);
+      const finished = state.currentTrack;
+      if (finished) {
+        await loadRelatedSongs(finished.videoId, { title: finished.title, artists: finished.artists });
+        // After loading, try to play the next item if it was appended
+        setTimeout(() => {
+          const { queue, currentIndex } = state;
+          const next = queue[currentIndex + 1];
+          if (next) {
+            setState(prev => ({
+              ...prev,
+              currentTrack: next,
+              currentIndex: currentIndex + 1,
+              isLoading: true,
+              error: null,
+            }));
           } else {
-            setState(prev => ({ ...prev, error: 'No more songs available', isLoading: false }));
+            setState(prev => ({ ...prev, error: 'No more songs in queue', isLoading: false }));
           }
-        } catch {
-          setState(prev => ({ ...prev, error: 'Failed to find next song', isLoading: false }));
-        }
+        }, 200);
+      } else {
+        setState(prev => ({ ...prev, error: 'No more songs in queue', isLoading: false }));
       }
     }
-  }, [state, getNextTrack, playTrack]);
+  }, [state, getNextTrack, loadRelatedSongs]);
 
   const playPrevious = useCallback(() => {
     if (state.currentIndex > 0 && state.queue[state.currentIndex - 1]) {
@@ -310,10 +328,8 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
       const shuffled = [...prev.queue];
       const currentTrack = prev.currentTrack;
       
-      // Remove current track from shuffle
       const filteredQueue = shuffled.filter(t => t.videoId !== currentTrack?.videoId);
       
-      // Fisher-Yates shuffle
       for (let i = filteredQueue.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         const temp = filteredQueue[i];
@@ -321,7 +337,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         filteredQueue[j] = temp;
       }
       
-      // Put current track at the beginning
       const newQueue = currentTrack ? [currentTrack, ...filteredQueue] : filteredQueue;
       
       return {
@@ -332,47 +347,18 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, []);
 
-  const loadRelatedSongs = useCallback(async (videoId: string) => {
-    try {
-      const res = await fetch(`/api/related/${videoId}`);
-      const relatedSongs = await res.json();
-      
-      if (Array.isArray(relatedSongs) && relatedSongs.length > 0) {
-        setState(prev => {
-          // Add related songs to queue, avoiding duplicates
-          const newSongs = relatedSongs.filter(
-            (song: Track) => !prev.queue.find(t => t.videoId === song.videoId)
-          );
-          return {
-            ...prev,
-            queue: [...prev.queue, ...newSongs],
-          };
-        });
-      }
-    } catch {
-      console.error('Failed to load related songs');
-    }
-  }, []);
-
-  // Handle audio source changes
+  // Handle audio source changes - SIMPLIFIED
   useEffect(() => {
     if (!audioRef.current || !state.currentTrack) return;
 
-    // Abort previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    const audio = audioRef.current;
+    audio.src = `/api/stream/${state.currentTrack.videoId}`;
+    audio.crossOrigin = 'anonymous';
+    audio.volume = state.isMuted ? 0 : state.volume;
     
-    abortControllerRef.current = new AbortController();
-    
-    const loadAudio = async () => {
-      try {
-        setState(prev => ({ ...prev, isLoading: true, error: null }));
-        
-        audioRef.current!.src = `/api/stream/${state.currentTrack!.videoId}`;
-        audioRef.current!.crossOrigin = 'anonymous';
-        
-        await audioRef.current!.play();
+    // Simple event handlers
+    audio.oncanplay = () => {
+      audio.play().then(() => {
         setState(prev => ({ 
           ...prev, 
           isPlaying: true, 
@@ -381,23 +367,34 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
             ? [...prev.history.slice(-9), prev.currentTrack] 
             : prev.history
         }));
-        
-        // Auto-load related songs for continuous playback
-        if (state.currentTrack && state.queue.length <= 2) {
-          loadRelatedSongs(state.currentTrack.videoId);
-        }
-      } catch {
+      }).catch((error) => {
+        console.error('Play failed:', error);
         setState(prev => ({ 
           ...prev, 
           isPlaying: false, 
           isLoading: false, 
-          error: 'Failed to load track' 
+          error: 'Failed to play track' 
         }));
-      }
+      });
+    };
+    
+    audio.onerror = () => {
+      setState(prev => ({ 
+        ...prev, 
+        isPlaying: false, 
+        isLoading: false, 
+        error: 'Failed to load track' 
+      }));
     };
 
-    loadAudio();
-  }, [state.currentTrack]);
+    // Load related songs after delay
+    setTimeout(() => {
+      if (state.queue.length <= 2 && state.currentTrack) {
+        loadRelatedSongs(state.currentTrack.videoId, { title: state.currentTrack.title, artists: state.currentTrack.artists });
+      }
+    }, 1500);
+
+  }, [state.currentTrack, loadRelatedSongs, state.queue.length, state.isMuted, state.volume]);
 
   // Audio event listeners
   useEffect(() => {
@@ -433,10 +430,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         error: 'Audio playback error' 
       }));
     };
-    
-    const handleLoadStart = () => {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
-    };
 
     audio.addEventListener("timeupdate", updateProgress);
     audio.addEventListener("loadedmetadata", setDuration);
@@ -444,7 +437,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
-    audio.addEventListener("loadstart", handleLoadStart);
 
     return () => {
       audio.removeEventListener("timeupdate", updateProgress);
@@ -453,39 +445,22 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
-      audio.removeEventListener("loadstart", handleLoadStart);
     };
   }, [playNext]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
-    };
-  }, []);
 
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      // Avoid inputs/textareas
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return;
 
-      // Space: play/pause
       if (e.code === 'Space') {
         e.preventDefault();
         togglePlay();
         return;
       }
 
-      // ArrowRight/Left: seek +/- 5s
       if (e.code === 'ArrowRight') {
         e.preventDefault();
         if (audioRef.current) seek(Math.min((audioRef.current.currentTime || 0) + 5, state.duration));
@@ -497,7 +472,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      // ArrowUp/Down: volume +/- 5%
       if (e.code === 'ArrowUp') {
         e.preventDefault();
         setVolume(Math.min(1, state.volume + 0.05));
@@ -509,7 +483,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      // N/P: next/previous
       if (e.key.toLowerCase() === 'n') {
         e.preventDefault();
         playNext();
@@ -521,7 +494,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      // M: mute
       if (e.key.toLowerCase() === 'm') {
         e.preventDefault();
         toggleMute();

@@ -33,10 +33,10 @@ export default function QueueDrawer({
       <aside className="fixed right-0 bottom-0 top-0 w-[360px] max-w-[90vw] bg-gray-900 text-cyan-400 border-l border-gray-800 z-50 flex flex-col">
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
           <h3 className="font-bold">Queue ({queue.length})</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button 
               onClick={shuffleQueue}
-              className="text-gray-400 hover:text-cyan-400 transition-colors"
+              className="text-gray-400 hover:text-cyan-400 transition-colors p-2 rounded-lg hover:bg-gray-800"
               title="Shuffle queue"
               aria-label="Shuffle queue"
             >
@@ -44,17 +44,17 @@ export default function QueueDrawer({
             </button>
             <button 
               onClick={clearQueue}
-              className="text-gray-400 hover:text-red-400 transition-colors"
-              title="Clear queue"
-              aria-label="Clear queue"
+              className="text-gray-400 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10 text-sm font-medium"
+              title="Clear all songs from queue"
+              aria-label="Clear all songs from queue"
             >
-              <X className="w-4 h-4" />
+              Clear All
             </button>
             <button 
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-200 transition-colors"
-              title="Close"
-              aria-label="Close"
+              className="text-gray-400 hover:text-gray-200 transition-colors p-2 rounded-lg hover:bg-gray-800"
+              title="Close queue"
+              aria-label="Close queue"
             >
               <X className="w-4 h-4" />
             </button>
