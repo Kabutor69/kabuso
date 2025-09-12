@@ -47,6 +47,8 @@ export async function GET(req: Request) {
         views: video.views || 0,
         thumbnail: video.thumbnail?.url || '',
       }))
+      .filter(t => t.duration >= 30)
+      .filter(t => !/shorts/i.test(t.title))
       .filter(t => {
         if (seen.has(t.videoId)) return false;
         seen.add(t.videoId);

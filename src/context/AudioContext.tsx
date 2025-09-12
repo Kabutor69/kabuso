@@ -43,7 +43,7 @@ type AudioContextType = AudioState & {
   setPlaybackMode: (mode: PlaybackMode) => void;
   shuffleQueue: () => void;
   setError: (error: string | null) => void;
-  loadRelatedSongs: (videoId: string, queryHint?: { title?: string; artists?: string }) => Promise<void>;
+  loadRelatedSongs: (videoId: string, queryHint?: { title?: string; artists?: string }) => Promise<Track[]>;
 };
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -199,7 +199,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // Load related songs based on current track metadata
-  const loadRelatedSongs = useCallback(async (videoId: string, queryHint?: { title?: string; artists?: string }) => {
+  const loadRelatedSongs = useCallback(async (videoId: string, queryHint?: { title?: string; artists?: string }): Promise<Track[]> => {
     try {
       const q = [queryHint?.title, queryHint?.artists].filter(Boolean).join(' ');
       const url = q ? `/api/related/${videoId}?q=${encodeURIComponent(q)}` : `/api/related/${videoId}`;
@@ -207,23 +207,10 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const relatedSongs = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
-
-      if (relatedSongs.length > 0) {
-        setState(prev => {
-          const existingIds = new Set<string>([
-            ...prev.queue.map(t => t.videoId),
-            ...prev.history.map(t => t.videoId),
-            prev.currentTrack?.videoId || '',
-          ].filter(Boolean) as string[]);
-          const newSongs = relatedSongs.filter((song: Track) => !existingIds.has(song.videoId));
-          return {
-            ...prev,
-            queue: [...prev.queue, ...newSongs],
-          };
-        });
-      }
+      return relatedSongs;
     } catch (err) {
       console.error('Failed to load related songs', err);
+      return [];
     }
   }, []);
 
@@ -265,23 +252,28 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       const finished = state.currentTrack;
       if (finished) {
-        await loadRelatedSongs(finished.videoId, { title: finished.title, artists: finished.artists });
-        // After loading, try to play the next item if it was appended
-        setTimeout(() => {
-          const { queue, currentIndex } = state;
-          const next = queue[currentIndex + 1];
-          if (next) {
-            setState(prev => ({
-              ...prev,
-              currentTrack: next,
-              currentIndex: currentIndex + 1,
-              isLoading: true,
-              error: null,
-            }));
-          } else {
-            setState(prev => ({ ...prev, error: 'No more songs in queue', isLoading: false }));
+        const fetched = await loadRelatedSongs(finished.videoId, { title: finished.title, artists: finished.artists });
+        setState(prev => {
+          const existingIds = new Set<string>([
+            ...prev.queue.map(t => t.videoId),
+            ...prev.history.map(t => t.videoId),
+            prev.currentTrack?.videoId || '',
+          ].filter(Boolean) as string[]);
+          const newSongs = fetched.filter(song => !existingIds.has(song.videoId));
+          if (newSongs.length === 0) {
+            return { ...prev, error: 'No more songs in queue', isLoading: false };
           }
-        }, 200);
+          const startIndex = prev.queue.length;
+          const next = newSongs[0];
+          return {
+            ...prev,
+            queue: [...prev.queue, ...newSongs],
+            currentTrack: next,
+            currentIndex: startIndex,
+            isLoading: true,
+            error: null,
+          };
+        });
       } else {
         setState(prev => ({ ...prev, error: 'No more songs in queue', isLoading: false }));
       }
@@ -347,7 +339,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, []);
 
-  // Handle audio source changes - SIMPLIFIED
+  // Handle audio source changes only when current track changes
   useEffect(() => {
     if (!audioRef.current || !state.currentTrack) return;
 
@@ -386,15 +378,33 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         error: 'Failed to load track' 
       }));
     };
+  }, [state.currentTrack]);
 
-    // Load related songs after delay
-    setTimeout(() => {
-      if (state.queue.length <= 2 && state.currentTrack) {
-        loadRelatedSongs(state.currentTrack.videoId, { title: state.currentTrack.title, artists: state.currentTrack.artists });
-      }
-    }, 1500);
+  // Keep volume in sync without reloading audio
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.volume = state.isMuted ? 0 : state.volume;
+  }, [state.isMuted, state.volume]);
 
-  }, [state.currentTrack, loadRelatedSongs, state.queue.length, state.isMuted, state.volume]);
+  // Proactively load related songs in background when queue low
+  useEffect(() => {
+    if (!state.currentTrack) return;
+    if (state.queue.length <= 2) {
+      (async () => {
+        const fetched = await loadRelatedSongs(state.currentTrack!.videoId, { title: state.currentTrack!.title, artists: state.currentTrack!.artists });
+        setState(prev => {
+          const existingIds = new Set<string>([
+            ...prev.queue.map(t => t.videoId),
+            ...prev.history.map(t => t.videoId),
+            prev.currentTrack?.videoId || '',
+          ].filter(Boolean) as string[]);
+          const newSongs = fetched.filter(song => !existingIds.has(song.videoId));
+          if (newSongs.length === 0) return prev;
+          return { ...prev, queue: [...prev.queue, ...newSongs] };
+        });
+      })();
+    }
+  }, [state.currentTrack, state.queue.length, loadRelatedSongs]);
 
   // Audio event listeners
   useEffect(() => {
