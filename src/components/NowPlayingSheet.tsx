@@ -44,7 +44,7 @@ export default function NowPlayingSheet({
   return (
     <div className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="absolute bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 rounded-t-2xl p-4">
+      <div className="absolute bottom-0 left-0 right-0 bg-black border-t border-gray-800 rounded-t-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm text-gray-400">Now Playing</div>
           <button aria-label="Close" title="Close" onClick={onClose} className="text-gray-400">

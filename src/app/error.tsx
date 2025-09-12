@@ -1,53 +1,20 @@
 "use client";
-import { useEffect } from "react";
+
 import Link from "next/link";
-import { AlertCircle, RefreshCw, Home } from "lucide-react";
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  useEffect(() => {
-    console.error('App error:', error);
-  }, [error]);
-
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-cyan-400 flex items-center justify-center p-6">
-      <div className="text-center max-w-md mx-auto">
-        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 backdrop-blur-sm">
-          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent mb-4">
-            Oops! Something went wrong
-          </h1>
-          <p className="text-red-300 mb-6">
-            {error.message || "An unexpected error occurred while loading the page."}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={reset}
-              className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg transition-colors font-semibold shadow-lg hover:shadow-red-500/20"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Try again
-            </button>
-            <Link
-              href="/"
-              className="flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-cyan-400 px-6 py-3 rounded-lg transition-colors font-semibold"
-            >
-              <Home className="w-4 h-4" />
-              Go home
-            </Link>
+    <html>
+      <body className="min-h-screen bg-black text-cyan-300 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900/60 border border-gray-800 rounded-2xl p-6 text-center">
+          <div className="text-2xl font-bold gradient-text mb-2">Something went wrong</div>
+          <p className="text-gray-400 text-sm mb-4 break-words">{error?.message || "Unexpected error"}</p>
+          <div className="flex items-center justify-center gap-2">
+            <button onClick={() => reset()} className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-lg font-semibold">Try again</button>
+            <Link href="/" className="px-4 py-2 rounded-lg border border-gray-700 hover:bg-gray-800">Go home</Link>
           </div>
-          {error.digest && (
-            <p className="text-xs text-gray-500 mt-4">
-              Error ID: {error.digest}
-            </p>
-          )}
         </div>
-      </div>
-    </div>
+      </body>
+    </html>
   );
 }

@@ -48,38 +48,38 @@ export default function TrackCard({
 
   return (
     <div
-      className="group bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 hover:bg-gray-800/70 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-cyan-500/20 border border-gray-700/50 h-full flex flex-col"
+      className="group bg-gray-900/60 border border-gray-800 rounded-xl p-3 hover:bg-gray-900 transition-colors h-full flex flex-col"
       role="article"
       aria-label={`${track.title} by ${track.artists}`}
     >
-      <div className="relative mb-4">
+      <div className="relative mb-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={track.thumbnail}
           alt={track.title}
-          className="w-full aspect-square rounded-xl object-cover shadow-lg"
+          className="w-full aspect-square rounded-lg object-cover"
         />
-        <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-black/30">
           <button
             onClick={onPlay}
-            className="bg-cyan-500 hover:bg-cyan-400 text-black p-3 rounded-full shadow-lg transform hover:scale-110 transition-all duration-200"
+            className="bg-cyan-500 hover:bg-cyan-400 text-black p-2 rounded-full"
             aria-label="Play"
             title="Play"
           >
-            <Play className="w-6 h-6 ml-1" />
+            <Play className="w-5 h-5 ml-0.5" />
           </button>
         </div>
         {typeof indexBadge !== "undefined" && (
-          <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-semibold">
+          <div className="absolute top-2 right-2 bg-black/70 rounded-md px-1.5 py-0.5 text-[10px] font-semibold">
             {indexBadge}
           </div>
         )}
         {isActive && (
-          <div className="absolute top-2 left-2 bg-cyan-500 text-black rounded-full px-2 py-1 text-xs font-semibold flex items-center gap-1">
+          <div className="absolute top-2 left-2 bg-cyan-500 text-black rounded-md px-1.5 py-0.5 text-[10px] font-semibold flex items-center gap-1">
             {isPlaying ? (
               <>
-                <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
-                Now Playing
+                <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></div>
+                Playing
               </>
             ) : (
               <>
@@ -91,20 +91,20 @@ export default function TrackCard({
         )}
       </div>
 
-      <div className="flex flex-col flex-1">
-        <div className="flex-1 space-y-2">
-          <h3 className="font-bold text-lg line-clamp-2 group-hover:text-cyan-400 transition-colors min-h-[3.5rem] flex items-start" title={track.title}>
+      <div className="flex-1 flex flex-col">
+        <div className="flex-1 space-y-1.5">
+          <h3 className="font-semibold text-base line-clamp-2 min-h-[2.5rem]" title={track.title}>
             {track.title}
           </h3>
-          <p className="text-gray-400 text-sm line-clamp-1" title={track.artists}>
+          <p className="text-gray-400 text-xs line-clamp-1" title={track.artists}>
             {track.artists}
           </p>
 
           {showMeta && (track.duration || track.views) && (
-            <div className="flex items-center justify-between text-xs text-gray-500 min-h-[1.5rem]">
-              <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between text-[11px] text-gray-500 min-h-[1.25rem]">
+              <div className="flex items-center gap-3">
                 {track.duration && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-700/40 text-gray-300 font-mono">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 font-mono">
                     <Clock className="w-3 h-3" />
                     {durationText(track.duration)}
                   </span>
@@ -118,7 +118,7 @@ export default function TrackCard({
         <div className="flex items-center gap-2 pt-2 mt-auto">
           <button
             onClick={onPlay}
-            className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black py-1.5 rounded-md font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             <Play className="w-4 h-4" />
             Play
@@ -126,7 +126,7 @@ export default function TrackCard({
           {onAddToQueue && (
             <button
               onClick={onAddToQueue}
-              className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
+              className="p-1.5 text-gray-400 hover:text-cyan-400 transition-colors"
               title="Add to queue"
               aria-label="Add to queue"
             >
@@ -135,7 +135,7 @@ export default function TrackCard({
           )}
           <button
             onClick={onToggleFavorite}
-            className={`p-2 transition-colors ${
+            className={`p-1.5 transition-colors ${
               isFavorite ? "text-red-400 hover:text-red-300" : "text-gray-400 hover:text-red-400"
             }`}
             title={isFavorite ? "Remove from favorites" : "Add to favorites"}

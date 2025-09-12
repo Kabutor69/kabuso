@@ -29,33 +29,18 @@ export default function QueueDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <aside className="fixed right-0 bottom-0 top-0 w-[360px] max-w-[90vw] bg-gray-900 text-cyan-400 border-l border-gray-800 z-50 flex flex-col">
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <h3 className="font-bold">Queue ({queue.length})</h3>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={shuffleQueue}
-              className="text-gray-400 hover:text-cyan-400 transition-colors p-2 rounded-lg hover:bg-gray-800"
-              title="Shuffle queue"
-              aria-label="Shuffle queue"
-            >
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+      <aside className="fixed right-0 bottom-0 top-0 w-[360px] max-w-[90vw] bg-black text-cyan-300 border-l border-gray-800 z-50 flex flex-col">
+        <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Queue ({queue.length})</h3>
+          <div className="flex items-center gap-2">
+            <button onClick={shuffleQueue} className="text-gray-400 hover:text-cyan-400 transition-colors p-2 rounded-lg hover:bg-gray-900" title="Shuffle queue" aria-label="Shuffle queue">
               <Shuffle className="w-4 h-4" />
             </button>
-            <button 
-              onClick={clearQueue}
-              className="text-gray-400 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10 text-sm font-medium"
-              title="Clear all songs from queue"
-              aria-label="Clear all songs from queue"
-            >
+            <button onClick={clearQueue} className="text-gray-400 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10 text-xs font-medium" title="Clear all songs from queue" aria-label="Clear all songs from queue">
               Clear All
             </button>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-200 transition-colors p-2 rounded-lg hover:bg-gray-800"
-              title="Close queue"
-              aria-label="Close queue"
-            >
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-200 transition-colors p-2 rounded-lg hover:bg-gray-900" title="Close queue" aria-label="Close queue">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -64,20 +49,16 @@ export default function QueueDrawer({
           {queue.map((track, index) => (
             <div
               key={`${track.videoId}-${index}`}
-              className={`group flex items-center gap-3 p-3 cursor-pointer rounded-lg hover:bg-gray-800 transition-colors border-l-2 ${
-                index === currentIndex ? "bg-gray-800 border-cyan-500" : "border-transparent"
+              className={`group flex items-center gap-3 p-2.5 cursor-pointer rounded-md hover:bg-gray-900 transition-colors border-l-2 ${
+                index === currentIndex ? "bg-gray-900 border-cyan-500" : "border-transparent"
               }`}
               onClick={() => playFromQueue(index)}
             >
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={track.thumbnail} 
-                  alt={track.title} 
-                  className="w-12 h-12 rounded-lg object-cover" 
-                />
+                <img src={track.thumbnail} alt={track.title} className="w-12 h-12 rounded-md object-cover" />
                 {index === currentIndex && (
-                  <div className="absolute inset-0 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                  <div className="absolute inset-0 bg-cyan-500/15 rounded-md flex items-center justify-center">
                     <div className="text-cyan-500">
                       {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                     </div>
@@ -85,12 +66,8 @@ export default function QueueDrawer({
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" title={track.title}>
-                  {track.title}
-                </p>
-                <p className="text-xs text-gray-400 truncate" title={track.artists}>
-                  {track.artists}
-                </p>
+                <p className="text-sm font-medium truncate" title={track.title}>{track.title}</p>
+                <p className="text-xs text-gray-400 truncate" title={track.artists}>{track.artists}</p>
               </div>
               <button
                 onClick={(e) => {

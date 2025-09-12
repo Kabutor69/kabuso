@@ -27,8 +27,6 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [limit, setLimit] = useState(20);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
@@ -80,7 +78,7 @@ export default function SearchPage() {
     saveToSearchHistory(query.trim());
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&limit=${limit}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       
       const data = await res.json();
@@ -93,24 +91,6 @@ export default function SearchPage() {
       setTracks([]);
     } finally {
       setIsSearching(false);
-    }
-  };
-
-  const loadMore = async () => {
-    if (!query.trim()) return;
-    try {
-      setIsLoadingMore(true);
-      const newLimit = Math.min(50, limit + 10);
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&limit=${newLimit}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
-      setTracks(list);
-      setLimit(newLimit);
-    } catch (err) {
-      console.error('Load more search failed', err);
-    } finally {
-      setIsLoadingMore(false);
     }
   };
 
@@ -144,29 +124,24 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-cyan-400 pb-32">
+    <div className="min-h-screen bg-black text-cyan-300 pb-32">
       <Navbar />
       
       {/* Header */}
-      <div className="px-6 pt-8 pb-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="bg-cyan-500 p-2 rounded-xl">
-              <SearchIcon className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent">
-                Search
-              </h1>
-              <p className="text-gray-400 text-sm">Find your favorite music</p>
-            </div>
-            <div className="flex-1 h-px bg-gradient-to-r from-cyan-400/50 to-transparent"></div>
+      <div className="px-4 sm:px-6 pt-6 pb-6 border-b border-gray-800/60">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <div className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-md p-2">
+            <SearchIcon className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold gradient-text">Search</h1>
+            <p className="text-gray-400 text-xs sm:text-sm">Find your favorite music</p>
           </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="px-6 pb-6">
+      <div className="px-4 sm:px-6 pt-6 pb-8">
         <div className="max-w-7xl mx-auto">
 
           {/* Search Form */}
@@ -237,14 +212,14 @@ export default function SearchPage() {
       </div>
 
       {/* Search Results */}
-      <div className="px-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto py-6">
           {/* Results Header */}
           {hasSearched && !isSearching && tracks.length > 0 && (
             <div className="flex items-center justify-between mb-8">
               <div>
                 <p className="text-gray-400 text-sm">
-                  Showing {tracks.length} results for &quot;{query}&quot;
+                  Found {tracks.length} results for &quot;{query}&quot;
                 </p>
               </div>
               <button 
@@ -303,18 +278,6 @@ export default function SearchPage() {
                   showMeta
                 />
               ))}
-            </div>
-          )}
-
-          {!isSearching && !error && tracks.length >= limit && limit < 50 && (
-            <div className="flex justify-center py-8">
-              <button 
-                onClick={loadMore}
-                disabled={isLoadingMore}
-                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-cyan-500/20"
-              >
-                {isLoadingMore ? 'Loading...' : 'Load more'}
-              </button>
             </div>
           )}
 

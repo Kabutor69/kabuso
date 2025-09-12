@@ -25,12 +25,12 @@ export default function FavoritesPage() {
 
   if (favorites.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-cyan-400 pb-28">
+      <div className="min-h-screen bg-black text-cyan-300 pb-28">
         <Navbar />
         
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="bg-gray-800/50 rounded-2xl p-12 max-w-md mx-auto">
+            <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-12 max-w-md mx-auto">
               <Heart className="w-20 h-20 text-gray-600 mx-auto mb-6" />
               <h2 className="text-2xl font-bold text-gray-300 mb-4">No Favorites Yet</h2>
               <p className="text-gray-500 mb-6">
@@ -51,52 +51,51 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-cyan-400 pb-28">
+    <div className="min-h-screen bg-black text-cyan-300 pb-28">
       <Navbar />
       
       {/* Header */}
-      <div className="px-6 py-8">
+      <div className="px-4 sm:px-6 pt-6 pb-6 border-b border-gray-800/60">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <div className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-md p-2">
+            <Heart className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold gradient-text">My Favorites</h1>
+            <p className="text-gray-400 text-xs sm:text-sm">{favorites.length} songs</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Play All Button */}
+      <div className="px-4 sm:px-6 pt-6 pb-4">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="bg-cyan-500 p-2 rounded-xl">
-              <Heart className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent">
-                My Favorites
-              </h1>
-              <p className="text-gray-400 text-sm">{favorites.length} songs</p>
-            </div>
-            <div className="flex-1 h-px bg-gradient-to-r from-cyan-400/50 to-transparent"></div>
-          </div>
+          <button 
+            onClick={playAllFavorites}
+            className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-black px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            <Play className="w-5 h-5 ml-1" />
+            Play All Favorites
+          </button>
+        </div>
+      </div>
 
-          {/* Play All Button */}
-          <div className="mb-8">
-            <button 
-              onClick={playAllFavorites}
-              className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-black px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              <Play className="w-5 h-5 ml-1" />
-              Play All Favorites
-            </button>
-          </div>
-
-          {/* Favorites Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {favorites.map((track) => (
-              <TrackCard
-                key={track.videoId}
-                track={track}
-                isActive={currentTrack?.videoId === track.videoId}
-                isPlaying={isPlaying}
-                onPlay={() => playTrack(track)}
-                onAddToQueue={() => addToQueue(track)}
-                isFavorite={true}
-                onToggleFavorite={() => removeFromFavorites(track.videoId)}
-                showMeta
-              />
-            ))}
-          </div>
+      {/* Favorites Grid */}
+      <div className="px-4 sm:px-6 pb-6">
+        <div className="max-w-7xl mx-auto pb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {favorites.map((track) => (
+            <TrackCard
+              key={track.videoId}
+              track={track}
+              isActive={currentTrack?.videoId === track.videoId}
+              isPlaying={isPlaying}
+              onPlay={() => playTrack(track)}
+              onAddToQueue={() => addToQueue(track)}
+              isFavorite={true}
+              onToggleFavorite={() => removeFromFavorites(track.videoId)}
+              showMeta
+            />
+          ))}
         </div>
       </div>
 

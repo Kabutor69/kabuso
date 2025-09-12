@@ -23,15 +23,13 @@ export default function HomePage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [limit, setLimit] = useState(20);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
-    const fetchTrending = async (l: number) => {
+    const fetchTrending = async () => {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`/api/trending?limit=${l}`);
+        const res = await fetch(`/api/trending`);
         const data = await res.json();
         const list = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
         setSongs(list);
@@ -42,24 +40,8 @@ export default function HomePage() {
         setLoading(false);
       }
     };
-    fetchTrending(limit);
-  }, [limit]);
-
-  const loadMore = async () => {
-    try {
-      setIsLoadingMore(true);
-      const newLimit = Math.min(50, limit + 10);
-      const res = await fetch(`/api/trending?limit=${newLimit}`);
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
-      setSongs(list);
-      setLimit(newLimit);
-    } catch (err) {
-      console.error('Load more trending failed', err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
+    fetchTrending();
+  }, []);
 
   const formatDuration = (raw?: number) => {
     if (!raw || raw < 1) return "0:00";
@@ -142,30 +124,25 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-cyan-400 pb-28">
+    <div className="min-h-screen bg-black text-cyan-300 pb-28">
       <Navbar />
       
       {/* Header */}
-      <div className="px-6 pt-8 pb-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="bg-cyan-500 p-2 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent">
-                Trending
-              </h1>
-              <p className="text-gray-400 text-sm">{songs.length} songs</p>
-            </div>
-            <div className="flex-1 h-px bg-gradient-to-r from-cyan-400/50 to-transparent"></div>
+      <div className="px-4 sm:px-6 pt-6 pb-6 border-b border-gray-800/60">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <div className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-md p-2">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold gradient-text">Trending</h1>
+            <p className="text-gray-400 text-xs sm:text-sm">{songs.length} songs</p>
           </div>
         </div>
       </div>
-
+ 
       {/* Content */}
-      <div className="px-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto py-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.isArray(songs) && songs.map((song, index) => (
               <TrackCard
@@ -180,7 +157,7 @@ export default function HomePage() {
               />
             ))}
           </div>
-
+ 
           {songs.length === 0 && (
             <div className="text-center py-16">
               <Music className="w-16 h-16 text-gray-600 mx-auto mb-4" />
@@ -188,21 +165,10 @@ export default function HomePage() {
               <p className="text-gray-500">Try refreshing the page or check back later</p>
             </div>
           )}
-
+ 
           <div className="h-24" />
-          {songs.length >= limit && limit < 50 && (
-            <div className="flex justify-center py-6">
-              <button 
-                onClick={loadMore}
-                disabled={isLoadingMore}
-                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-cyan-500/20"
-              >
-                {isLoadingMore ? 'Loading...' : 'Load more'}
-              </button>
-            </div>
-          )}
-          </div>
         </div>
+      </div>
       
       <Playbar />
     </div>
