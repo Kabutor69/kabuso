@@ -6,18 +6,16 @@ export const runtime = "nodejs";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const videoId = params.id;
+  const { id: videoId } = await context.params;
 
   if (!videoId || !/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
     return NextResponse.json({ error: "Invalid video ID" }, { status: 400 });
   }
 
   try {
-    // Lazy import prevents bundling issues on Vercel
     const ytdl = await import("@distube/ytdl-core");
-
     console.log(`Streaming video: ${videoId}`);
 
     const info = await ytdl.getInfo(videoId);
@@ -30,7 +28,6 @@ export async function GET(
       throw new Error("No audio format found");
     }
 
-    // Stream with cookies + headers
     const stream = ytdl(videoId, {
       quality: "highestaudio",
       filter: "audioonly",
