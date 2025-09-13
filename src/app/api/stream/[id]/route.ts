@@ -18,7 +18,7 @@ export async function GET(
     console.log(`Streaming video: ${videoId}`);
     
     const info = await ytdl.getInfo(videoId);
-    const format = ytdl.chooseFormat(info.formats, {
+    const format = ytdl.chooseFormat(info.formats, { 
       quality: 'highestaudio',
       filter: 'audioonly',
     });
