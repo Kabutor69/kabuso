@@ -1,65 +1,69 @@
-import { NextRequest, NextResponse } from 'next/server';
-import ytdl from '@distube/ytdl-core';
+import { NextRequest } from "next/server";
+import ytdl from "@distube/ytdl-core";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+export const runtime = "nodejs";
+
+function isVercel() {
+  return process.env.VERCEL === "1";
+}
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id: videoId } = await params;
+  const videoId = params.id;
 
   if (!videoId || !/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
-    return NextResponse.json({ error: 'Invalid video ID' }, { status: 400 });
+    return new Response(JSON.stringify({ error: "Invalid video ID" }), {
+      status: 400,
+    });
   }
 
   try {
-    console.log(`Streaming video: ${videoId}`);
-    
     const info = await ytdl.getInfo(videoId);
     const format = ytdl.chooseFormat(info.formats, {
-      quality: 'highestaudio',
-      filter: 'audioonly',
+      quality: "highestaudio",
+      filter: "audioonly",
     });
 
-    if (!format || !format.url) {
-      throw new Error('No audio format found');
+    if (!format?.url) {
+      throw new Error("No audio format found");
     }
 
-    const stream = ytdl(videoId, {
-      quality: 'highestaudio',
-      filter: 'audioonly',
+    // On Vercel → redirect to YouTube's own CDN URL
+    if (isVercel()) {
+      return Response.redirect(format.url, 302);
+    }
+
+    // Local → stream via ytdl
+    const nodeStream = ytdl(videoId, {
+      quality: "highestaudio",
+      filter: "audioonly",
       highWaterMark: 1 << 25,
-      requestOptions: {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
+    });
+
+    const readable = new ReadableStream({
+      start(controller) {
+        nodeStream.on("data", (chunk) => controller.enqueue(chunk));
+        nodeStream.on("end", () => controller.close());
+        nodeStream.on("error", (err) => controller.error(err));
       },
     });
 
-    const responseHeaders = new Headers({
-      'Content-Type': format.mimeType || 'audio/mpeg',
-      'Accept-Ranges': 'bytes',
-      'Cache-Control': 'no-store',
-    });
-
-    return new NextResponse(stream as unknown as ReadableStream<Uint8Array>, {
+    return new Response(readable, {
       status: 200,
-      headers: responseHeaders,
+      headers: {
+        "Content-Type": format.mimeType || "audio/mpeg",
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+      },
     });
-
-  } catch (error: unknown) {
-    console.error('Stream error:', error);
-    // As a last resort, try redirecting to the audio URL if we have it
-    try {
-      const info = await ytdl.getInfo(videoId);
-      const format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
-      if (format?.url) {
-        return NextResponse.redirect(format.url);
-      }
-    } catch (_ignored) {}
-    return NextResponse.json({ error: 'Streaming failed' }, { status: 500 });
+  } catch (error) {
+    console.error("Stream error:", error);
+    return new Response(JSON.stringify({ error: "Streaming failed" }), {
+      status: 500,
+    });
   }
 }
