@@ -15,7 +15,9 @@ export async function GET(
   }
 
   try {
-    const ytdl = await import("@distube/ytdl-core");
+    // ✅ grab default export
+    const { default: ytdl } = await import("@distube/ytdl-core");
+
     console.log(`Streaming video: ${videoId}`);
 
     const info = await ytdl.getInfo(videoId);
