@@ -11,8 +11,7 @@ import {
   Music,
   AlertCircle,
   X,
-  Clock,
-  Heart
+  Clock
 } from "lucide-react";
 import TrackCard from "../../components/TrackCard";
 

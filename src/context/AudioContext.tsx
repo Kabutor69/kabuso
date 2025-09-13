@@ -346,7 +346,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     const audio = audioRef.current;
     audio.src = `/api/stream/${state.currentTrack.videoId}`;
     audio.crossOrigin = 'anonymous';
-    audio.volume = state.isMuted ? 0 : state.volume;
     
     // Simple event handlers
     audio.oncanplay = () => {

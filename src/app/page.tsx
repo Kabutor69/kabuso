@@ -43,27 +43,6 @@ export default function HomePage() {
     fetchTrending();
   }, []);
 
-  const formatDuration = (raw?: number) => {
-    if (!raw || raw < 1) return "0:00";
-    // Some sources may provide milliseconds – normalize to seconds if too large
-    const seconds = Math.floor(raw > 10000 ? raw / 1000 : raw);
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}:${secs
-        .toString()
-        .padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatViews = (views: number) => {
-    if (!views) return "";
-    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M views`;
-    if (views >= 1000) return `${(views / 1000).toFixed(1)}K views`;
-    return `${views} views`;
-  };
 
   if (loading) {
     return (

@@ -30,11 +30,9 @@ export async function GET(
     const stream = ytdl(videoId, {
       quality: 'highestaudio',
       filter: 'audioonly',
-      highWaterMark: 1 << 25,
       requestOptions: {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36',
         },
       },
     });
@@ -52,14 +50,6 @@ export async function GET(
 
   } catch (error: unknown) {
     console.error('Stream error:', error);
-    // As a last resort, try redirecting to the audio URL if we have it
-    try {
-      const info = await ytdl.getInfo(videoId);
-      const format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
-      if (format?.url) {
-        return NextResponse.redirect(format.url);
-      }
-    } catch (_ignored) {}
     return NextResponse.json({ error: 'Streaming failed' }, { status: 500 });
   }
 }

@@ -1,4 +1,3 @@
-import { Loader2, Music, Volume2, Headphones } from "lucide-react";
 
 export default function GlobalLoading() {
   return (

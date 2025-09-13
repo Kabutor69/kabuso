@@ -16,7 +16,6 @@ import {
   Repeat1,
   Shuffle,
   Heart,
-  X,
   Loader2,
 } from "lucide-react";
 
@@ -92,13 +91,11 @@ export default function Playbar() {
   return (
     <>
       {error && (
-        <div className="fixed top-6 right-4 z-50">
-          <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl shadow-xl backdrop-blur-md min-w-[260px] text-center">
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-gray-900/95 border border-gray-700 text-gray-300 px-4 py-3 rounded-lg shadow-2xl backdrop-blur-sm min-w-[280px] text-center">
             <div className="flex items-center justify-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
               <span className="text-sm font-medium">{error}</span>
-              <button onClick={() => setError(null)} className="text-red-300 hover:text-red-200 transition-colors" aria-label="Dismiss" title="Dismiss">
-                <X className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </div>
