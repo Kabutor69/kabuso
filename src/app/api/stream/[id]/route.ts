@@ -6,17 +6,17 @@ export const runtime = "nodejs";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // ✅ must await
 ) {
-  const videoId = params.id;
+  // await the params
+  const { id: videoId } = await context.params;
 
   if (!videoId || !/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
     return NextResponse.json({ error: "Invalid video ID" }, { status: 400 });
   }
 
   try {
-    // lazy import ytdl to avoid bundling problems
-    const ytdl = (await import("@distube/ytdl-core")).default;
+    const ytdl = (await import("@distube/ytdl-core")).default; // ✅ default export
 
     console.log(`Redirecting to video audio stream: ${videoId}`);
 
@@ -30,7 +30,7 @@ export async function GET(
       throw new Error("No audio format found");
     }
 
-    // Instead of proxying -> just redirect browser to YouTube's audio stream
+    // 🔹 redirect to YouTube audio URL (works without cookies)
     return NextResponse.redirect(format.url, 302);
   } catch (error) {
     console.error("Stream error:", error);
