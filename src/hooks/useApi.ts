@@ -10,12 +10,12 @@ export interface UseApiReturn<T> {
   data: T | null;
   isLoading: boolean;
   error: string | null;
-  execute: (...args: any[]) => Promise<T | null>;
+  execute: (...args: unknown[]) => Promise<T | null>;
   reset: () => void;
 }
 
 export function useApi<T>(
-  apiFunction: (...args: any[]) => Promise<T>,
+  apiFunction: (...args: unknown[]) => Promise<T>,
   options: UseApiOptions = {}
 ): UseApiReturn<T> {
   const { immediate = false, retryCount = 0, retryDelay = 1000 } = options;
@@ -25,7 +25,7 @@ export function useApi<T>(
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const execute = useCallback(async (...args: any[]): Promise<T | null> => {
+  const execute = useCallback(async (...args: unknown[]): Promise<T | null> => {
     // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -112,7 +112,7 @@ export function useYouTubeApi() {
   const makeRequest = useCallback(async (
     url: string,
     options: RequestInit = {}
-  ): Promise<any> => {
+  ): Promise<unknown> => {
     // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();

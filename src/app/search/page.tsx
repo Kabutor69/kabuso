@@ -12,11 +12,7 @@ import {
   Music,
   AlertCircle,
   X,
-  Clock,
-  Filter,
-  Users,
-  Tag,
-  Loader2
+  Clock
 } from "lucide-react";
 import TrackCard from "../../components/TrackCard";
 
@@ -27,10 +23,8 @@ export default function SearchPage() {
   
   const [tracks, setTracks] = useState<Track[]>([]);
   const [query, setQuery] = useState("");
-  const [searchType, setSearchType] = useState<'all' | 'artist' | 'genre'>('all');
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
@@ -84,7 +78,6 @@ export default function SearchPage() {
     try {
       const results = await search({
         query: query.trim(),
-        type: searchType,
         limit: 30,
       });
       
@@ -124,21 +117,6 @@ export default function SearchPage() {
     });
   };
 
-  const getSearchTypeIcon = () => {
-    switch (searchType) {
-      case 'artist': return <Users className="w-4 h-4" />;
-      case 'genre': return <Tag className="w-4 h-4" />;
-      default: return <Music className="w-4 h-4" />;
-    }
-  };
-
-  const getSearchTypeLabel = () => {
-    switch (searchType) {
-      case 'artist': return 'Artist';
-      case 'genre': return 'Genre';
-      default: return 'All';
-    }
-  };
 
   return (
     <div className="min-h-screen bg-black text-cyan-300 pb-32">

@@ -1,5 +1,14 @@
 import { useState, useCallback, useRef } from 'react';
 
+interface Track {
+  videoId: string;
+  title: string;
+  artists: string;
+  duration: number;
+  views: number;
+  thumbnail: string;
+}
+
 export interface SearchOptions {
   query: string;
   type?: 'all' | 'artist' | 'genre';
@@ -7,13 +16,13 @@ export interface SearchOptions {
 }
 
 export interface SearchResult {
-  tracks: any[];
+  tracks: Track[];
   error?: string;
   isLoading: boolean;
 }
 
 export interface CacheEntry {
-  data: any[];
+  data: Track[];
   timestamp: number;
   query: string;
   type: string;
@@ -216,7 +225,7 @@ export function useSearch() {
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const search = useCallback(async (options: SearchOptions): Promise<any[]> => {
+  const search = useCallback(async (options: SearchOptions): Promise<Track[]> => {
     // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -247,7 +256,7 @@ export function useSearch() {
     }
   }, []);
 
-  const searchTrending = useCallback(async (limit = 20): Promise<any[]> => {
+  const searchTrending = useCallback(async (limit = 20): Promise<Track[]> => {
     setIsLoading(true);
     setError(null);
 
@@ -269,7 +278,7 @@ export function useSearch() {
     }
   }, []);
 
-  const searchRelated = useCallback(async (videoId: string, query?: string, limit = 15): Promise<any[]> => {
+  const searchRelated = useCallback(async (videoId: string, query?: string, limit = 15): Promise<Track[]> => {
     setIsLoading(true);
     setError(null);
 

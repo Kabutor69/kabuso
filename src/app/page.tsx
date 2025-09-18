@@ -6,7 +6,7 @@ import { useSearch } from "../lib/searchService";
 import Navbar from "../components/Navbar";
 import Playbar from "../components/Playbar";
 import TrackCard from "../components/TrackCard";
-import { TrendingUp, Music, Play, AlertCircle, Loader2 } from "lucide-react";
+import { TrendingUp, Music, Play, AlertCircle } from "lucide-react";
 
 export default function HomePage() {
   const { playTrack, addToQueue, currentTrack, isPlaying } = useAudio();
