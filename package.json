@@ -19,11 +19,11 @@
   },
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
+    "googleapis": "^160.0.0",
     "lucide-react": "^0.542.0",
     "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "youtube-sr": "^4.3.12",
     "ytdl-core": "^4.11.5"
   },
   "devDependencies": {

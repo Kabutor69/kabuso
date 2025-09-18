@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import ytdl from '@distube/ytdl-core';
+import { youtubeService } from '@/lib/youtube';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -17,25 +17,7 @@ export async function GET(
   try {
     console.log(`Streaming video: ${videoId}`);
     
-    const info = await ytdl.getInfo(videoId);
-    const format = ytdl.chooseFormat(info.formats, {
-      quality: 'highestaudio',
-      filter: 'audioonly',
-    });
-
-    if (!format || !format.url) {
-      throw new Error('No audio format found');
-    }
-
-    const stream = ytdl(videoId, {
-      quality: 'highestaudio',
-      filter: 'audioonly',
-      requestOptions: {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36',
-        },
-      },
-    });
+    const { stream, format } = await youtubeService.getAudioStream(videoId);
 
     const responseHeaders = new Headers({
       'Content-Type': format.mimeType || 'audio/mpeg',

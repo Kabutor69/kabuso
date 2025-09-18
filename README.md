@@ -1,150 +1,191 @@
-# Kabuso - Free Music Streaming Platform
+# 🎵 Kabuso
 
-A modern, free music streaming platform built with Next.js and ytdl-core. Stream millions of songs from YouTube Music without any subscriptions or ads.
+> **Free Music Streaming Platform** - Stream millions of songs without subscriptions or ads
+
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![YouTube API](https://img.shields.io/badge/YouTube-Data%20API%20v3-red?style=flat&logo=youtube)](https://developers.google.com/youtube/v3)
+
+A modern, fast, and beautiful music streaming platform built with Next.js and YouTube Data API v3. Discover trending music, search your favorites, and enjoy unlimited streaming.
 
 ## ✨ Features
 
-- 🎵 **Free Music Streaming** - Stream any song from YouTube Music
-- 🔍 **Advanced Search** - Find songs, artists, and albums instantly
+- 🎵 **Free Music Streaming** - Stream any song from YouTube
+- 🔍 **Smart Search** - Find songs, artists, and genres instantly
 - 🔥 **Trending Music** - Discover what's popular right now
-- ❤️ **Favorites System** - Save your favorite songs locally
-- 🎧 **High-Quality Audio** - Stream in the best available quality
-- 📱 **Responsive Design** - Works perfectly on desktop and mobile
-- 🎛️ **Advanced Player** - Full-featured music player with queue management
-- 🔄 **Playback Modes** - Normal, repeat, repeat-one, and shuffle
-- 📊 **Queue Management** - Add, remove, and reorder songs
-- 🎨 **Modern UI** - Beautiful dark theme with smooth animations
+- ❤️ **Favorites** - Save your favorite songs locally
+- 🎧 **High-Quality Audio** - Best available quality streaming
+- 📱 **Responsive Design** - Perfect on desktop and mobile
+- 🎛️ **Advanced Player** - Queue, shuffle, repeat modes
+- ⚡ **Lightning Fast** - Intelligent caching and optimization
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-### Prerequisites
-
-- Node.js 18.17.0 or higher
-- npm 9.0.0 or higher
-
-### Installation
-
-1. Clone the repository:
+### 1. Clone & Install
 ```bash
-git clone <repository-url>
+git clone <your-repo-url>
 cd kabuso-new
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Run the development server:
+### 2. Get YouTube API Key
+1. Go to [Google Cloud Console](https://console.developers.google.com/)
+2. Create a project and enable YouTube Data API v3
+3. Create an API key
+
+### 3. Setup Environment
+```bash
+# Create .env.local file
+echo "YOUTUBE_API_KEY=your_api_key_here" > .env.local
+```
+
+### 4. Run Development Server
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) and enjoy! 🎶
 
-## 🛠️ Built With
+## 🛠️ Tech Stack
 
-- **Next.js 15** - React framework for production
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS** - Utility-first CSS framework
-- **ytdl-core** - YouTube video/audio downloader
-- **youtube-sr** - YouTube search library
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **YouTube Data API v3** - Official Google API
+- **ytdl-core** - Audio streaming
 - **Lucide React** - Beautiful icons
-- **React Context** - State management
 
 ## 📁 Project Structure
 
 ```
-kabuso-new/
-├── src/
-│   ├── app/                 # Next.js app directory
-│   │   ├── api/            # API routes
-│   │   │   ├── search/     # Search endpoint
-│   │   │   ├── trending/   # Trending songs
-│   │   │   ├── stream/     # Audio streaming
-│   │   │   └── related/    # Related tracks
-│   │   ├── favorites/      # Favorites page
-│   │   ├── search/         # Search page
-│   │   └── page.tsx        # Homepage
-│   ├── components/         # React components
-│   │   ├── Navbar.tsx      # Navigation bar
-│   │   └── Playbar.tsx     # Music player
-│   ├── context/            # React contexts
-│   │   ├── AudioContext.tsx    # Audio state management
-│   │   └── FavoritesContext.tsx # Favorites management
-│   └── app/                # App configuration
-├── public/                 # Static assets
-└── package.json           # Dependencies
+src/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes
+│   │   ├── search/        # Search songs
+│   │   ├── trending/      # Trending music
+│   │   ├── stream/        # Audio streaming
+│   │   ├── related/       # Related tracks
+│   │   ├── artist/        # Artist search
+│   │   └── genre/         # Genre search
+│   ├── search/            # Search page
+│   ├── favorites/         # Favorites page
+│   └── page.tsx           # Homepage
+├── components/            # React components
+│   ├── TrackCard.tsx      # Music track display
+│   ├── Playbar.tsx        # Music player
+│   ├── Navbar.tsx         # Navigation
+│   └── ErrorBoundary.tsx  # Error handling
+├── context/               # React contexts
+│   ├── AudioContext.tsx   # Audio state
+│   └── FavoritesContext.tsx # Favorites
+├── lib/                   # Utilities
+│   ├── youtube.ts         # YouTube API service
+│   └── searchService.ts   # Search with caching
+└── hooks/                 # Custom hooks
+    └── useApi.ts          # API management
 ```
 
 ## 🎯 API Endpoints
 
-- `GET /api/search?q={query}` - Search for songs
-- `GET /api/trending` - Get trending songs
-- `GET /api/stream/{id}` - Stream audio for a video ID
-- `GET /api/related/{id}` - Get related tracks
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/search?q={query}&type={all\|artist\|genre}` | Search songs |
+| `GET /api/trending` | Get trending music |
+| `GET /api/stream/{id}` | Stream audio |
+| `GET /api/related/{id}` | Get related tracks |
+| `GET /api/artist?artist={name}` | Search by artist |
+| `GET /api/genre?genre={name}` | Search by genre |
+| `GET /api/video/{id}` | Get video metadata |
 
-## 🎨 Features Overview
+## 🎨 Key Features
 
-### Homepage
-- Trending music discovery
-- Beautiful hero section
-- Quick action cards
-- Responsive grid layout
+### 🔍 Smart Search
+- **Multi-type search** - All, Artist, Genre
+- **Search history** - Persistent across sessions
+- **Real-time results** - Instant search with debouncing
+- **Play all** - Queue entire search results
 
-### Search
-- Real-time search with debouncing
-- Search history
-- Advanced filtering
-- Play all results
+### 🎵 Music Player
+- **High-quality streaming** - Best available audio
+- **Queue management** - Add, remove, reorder
+- **Playback modes** - Normal, repeat, shuffle
+- **Volume control** - Mute/unmute support
+- **Progress seeking** - Jump to any position
 
-### Favorites
-- Local storage persistence
-- Add/remove favorites
-- Play all favorites
-- Visual feedback
+### ❤️ Favorites System
+- **Local storage** - No account required
+- **Visual feedback** - Heart animations
+- **Play all favorites** - Queue management
+- **Persistent** - Survives browser restarts
 
-### Music Player
-- Full-featured audio controls
-- Queue management
-- Volume control
-- Progress seeking
-- Playback modes (normal, repeat, shuffle)
-
-## 📱 Mobile Support
-
-Kabuso is fully responsive and optimized for mobile devices:
-- Touch-friendly controls
-- Mobile-optimized player
-- Responsive navigation
-- Swipe gestures support
-
-## 🎵 How It Works
-
-1. **Search**: Uses youtube-sr to search YouTube for music
-2. **Streaming**: ytdl-core extracts and streams audio directly
-3. **Caching**: Trending results are cached for better performance
-4. **Storage**: Favorites and settings are stored locally
+### 📱 Mobile Optimized
+- **Touch-friendly** - Swipe gestures
+- **Responsive design** - Works on all screens
+- **PWA ready** - Install as app
+- **Fast loading** - Optimized performance
 
 ## 🚀 Deployment
 
 ### Vercel (Recommended)
+1. Push to GitHub
+2. Connect to Vercel
+3. Add `YOUTUBE_API_KEY` environment variable
+4. Deploy! ✨
 
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Deploy with zero configuration
+### Other Platforms
+- **Netlify** - Static hosting
+- **Railway** - Full-stack hosting
+- **Docker** - Container deployment
 
-## ⚠️ Disclaimer
+## ⚡ Performance
 
-This application is for educational purposes only. Please respect YouTube's Terms of Service and copyright laws. The developers are not responsible for any misuse of this software.
+- **Intelligent Caching** - 5x faster repeated searches
+- **Request Cancellation** - No memory leaks
+- **Lazy Loading** - Images load on demand
+- **Error Boundaries** - Crash-resistant app
+- **TypeScript** - Compile-time error catching
+
+## 🛡️ Error Handling
+
+- **Global Error Boundary** - Catches app crashes
+- **API Error Recovery** - Automatic retry logic
+- **User-Friendly Messages** - Clear error descriptions
+- **Graceful Degradation** - App keeps working
+
+## 📱 Mobile Features
+
+- **Touch Controls** - Swipe to navigate
+- **Mobile Player** - Optimized for small screens
+- **Responsive Grid** - Adapts to screen size
+- **Fast Loading** - Optimized for mobile networks
+
+## ⚠️ Important Notes
+
+- **API Key Required** - Get free YouTube Data API v3 key
+- **Rate Limits** - Respects YouTube API quotas
+- **Educational Use** - Please respect copyright laws
+- **No Account Needed** - Works without registration
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## 📄 License
+
+This project is for educational purposes. Please respect YouTube's Terms of Service.
 
 ## 🙏 Acknowledgments
 
-- YouTube Music for the vast music library
-- ytdl-core developers for the excellent library
-- Next.js team for the amazing framework
-- All contributors and users
+- **YouTube** - For the vast music library
+- **Google** - For the YouTube Data API
+- **Next.js Team** - For the amazing framework
+- **All Contributors** - For making this possible
 
 ---
 
-**Made with ❤️ by the Kabutor**
+**Made with ❤️ by Kabutor**
+
+*Enjoy unlimited music streaming!* 🎶

@@ -203,12 +203,35 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const q = [queryHint?.title, queryHint?.artists].filter(Boolean).join(' ');
       const url = q ? `/api/related/${videoId}?q=${encodeURIComponent(q)}` : `/api/related/${videoId}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
-      const relatedSongs = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      const relatedSongs = Array.isArray(data.tracks) ? data.tracks : [];
       return relatedSongs;
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Related songs request aborted');
+        return [];
+      }
       console.error('Failed to load related songs', err);
       return [];
     }
@@ -344,16 +367,23 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     if (!audioRef.current || !state.currentTrack) return;
 
     const audio = audioRef.current;
-    audio.src = `/api/stream/${state.currentTrack.videoId}`;
-    audio.crossOrigin = 'anonymous';
+    const streamUrl = `/api/stream/${state.currentTrack.videoId}`;
     
-    // Simple event handlers
-    audio.oncanplay = () => {
+    // Set loading state
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    
+    audio.src = streamUrl;
+    audio.crossOrigin = 'anonymous';
+    audio.preload = 'metadata';
+    
+    // Enhanced event handlers with better error handling
+    const handleCanPlay = () => {
       audio.play().then(() => {
         setState(prev => ({ 
           ...prev, 
           isPlaying: true, 
           isLoading: false,
+          error: null,
           history: prev.currentTrack && !prev.history.find(t => t.videoId === prev.currentTrack!.videoId) 
             ? [...prev.history.slice(-9), prev.currentTrack] 
             : prev.history
@@ -364,20 +394,55 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
           ...prev, 
           isPlaying: false, 
           isLoading: false, 
-          error: 'Failed to play track' 
+          error: 'Playback failed. Please try again.' 
         }));
       });
     };
     
-    audio.onerror = () => {
+    const handleError = (e: Event) => {
+      console.error('Audio error:', e);
       setState(prev => ({ 
         ...prev, 
         isPlaying: false, 
         isLoading: false, 
-        error: 'Failed to load track' 
+        error: 'Failed to load audio. The track may be unavailable.' 
       }));
     };
-  }, [state.currentTrack]);
+
+    const handleLoadStart = () => {
+      setState(prev => ({ ...prev, isLoading: true }));
+    };
+
+    const handleLoadedMetadata = () => {
+      setState(prev => ({ ...prev, duration: audio.duration || 0 }));
+    };
+
+    const handleTimeUpdate = () => {
+      setState(prev => ({ ...prev, progress: audio.currentTime }));
+    };
+
+    const handleEnded = () => {
+      playNext();
+    };
+
+    // Add event listeners
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('loadstart', handleLoadStart);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    // Cleanup function
+    return () => {
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('loadstart', handleLoadStart);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [state.currentTrack, playNext]);
 
   // Keep volume in sync without reloading audio
   useEffect(() => {

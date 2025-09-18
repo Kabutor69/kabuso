@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAudio, type Track } from "../../context/AudioContext";
 import { useFavorites } from "../../context/FavoritesContext";
+import { useSearch } from "../../lib/searchService";
 import Navbar from "../../components/Navbar";
 import Playbar from "../../components/Playbar";
 import { 
@@ -11,21 +12,26 @@ import {
   Music,
   AlertCircle,
   X,
-  Clock
+  Clock,
+  Filter,
+  Users,
+  Tag,
+  Loader2
 } from "lucide-react";
 import TrackCard from "../../components/TrackCard";
-
-// Skeleton kept for potential future use
 
 export default function SearchPage() {
   const { playTrack, addToQueue, currentTrack, isPlaying } = useAudio();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { search, isLoading, error, clearError } = useSearch();
+  
   const [tracks, setTracks] = useState<Track[]>([]);
   const [query, setQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchType, setSearchType] = useState<'all' | 'artist' | 'genre'>('all');
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
@@ -71,25 +77,21 @@ export default function SearchPage() {
     e.preventDefault();
     if (!query.trim()) return;
 
-    setIsSearching(true);
-    setError(null);
     setHasSearched(true);
     saveToSearchHistory(query.trim());
+    clearError();
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const results = await search({
+        query: query.trim(),
+        type: searchType,
+        limit: 30,
+      });
       
-      const data = await res.json();
-      if (data?.error) throw new Error(data.error);
-      const list = Array.isArray(data) ? data : Array.isArray(data?.tracks) ? data.tracks : [];
-      setTracks(list);
+      setTracks(results);
     } catch (err) {
       console.error("Search failed:", err);
-      setError(err instanceof Error ? err.message : 'Search failed');
       setTracks([]);
-    } finally {
-      setIsSearching(false);
     }
   };
 
@@ -120,6 +122,22 @@ export default function SearchPage() {
         addToQueue(track);
       }
     });
+  };
+
+  const getSearchTypeIcon = () => {
+    switch (searchType) {
+      case 'artist': return <Users className="w-4 h-4" />;
+      case 'genre': return <Tag className="w-4 h-4" />;
+      default: return <Music className="w-4 h-4" />;
+    }
+  };
+
+  const getSearchTypeLabel = () => {
+    switch (searchType) {
+      case 'artist': return 'Artist';
+      case 'genre': return 'Genre';
+      default: return 'All';
+    }
   };
 
   return (
@@ -154,7 +172,7 @@ export default function SearchPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search for songs, artists, albums..."
                 className="w-full bg-gray-800 text-cyan-400 pl-12 pr-24 py-4 rounded-xl outline-none border border-gray-700 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-20 transition-all"
-                disabled={isSearching}
+                disabled={isLoading}
               />
               {query && (
                 <button
@@ -166,15 +184,14 @@ export default function SearchPage() {
                 </button>
               )}
               <button 
-                type={isSearching ? "button" : "submit"}
-                onClick={isSearching ? () => {
-                  setIsSearching(false);
-                  setError(null);
+                type={isLoading ? "button" : "submit"}
+                onClick={isLoading ? () => {
+                  clearError();
                 } : undefined}
-                disabled={!query.trim() && !isSearching}
+                disabled={!query.trim() && !isLoading}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-cyan-500 text-black px-6 py-2 rounded-lg hover:bg-cyan-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                {isSearching ? 'Cancel' : 'Search'}
+                {isLoading ? 'Cancel' : 'Search'}
               </button>
             </div>
           </form>
@@ -214,7 +231,7 @@ export default function SearchPage() {
       <div className="px-4 sm:px-6">
         <div className="max-w-7xl mx-auto py-6">
           {/* Results Header */}
-          {hasSearched && !isSearching && tracks.length > 0 && (
+          {hasSearched && !isLoading && tracks.length > 0 && (
             <div className="flex items-center justify-between mb-8">
               <div>
                 <p className="text-gray-400 text-sm">
@@ -249,7 +266,7 @@ export default function SearchPage() {
           )}
 
           {/* Loading State */}
-          {isSearching && (
+          {isLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="rounded-2xl p-4 border border-gray-800/50 bg-gray-900/40 backdrop-blur-sm animate-pulse">
@@ -262,7 +279,7 @@ export default function SearchPage() {
           )}
 
           {/* Search Results */}
-          {!isSearching && !error && tracks.length > 0 && (
+          {!isLoading && !error && tracks.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {Array.isArray(tracks) && tracks.map((track) => (
                 <TrackCard
@@ -281,7 +298,7 @@ export default function SearchPage() {
           )}
 
           {/* No Results */}
-          {hasSearched && !isSearching && !error && tracks.length === 0 && (
+          {hasSearched && !isLoading && !error && tracks.length === 0 && (
             <div className="text-center py-12">
               <Music className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-400 mb-2">No results found</h3>
@@ -292,7 +309,7 @@ export default function SearchPage() {
           )}
 
           {/* Default State */}
-          {!hasSearched && !isSearching && (
+          {!hasSearched && !isLoading && (
             <div className="text-center py-16 text-gray-500">
               Start searching for songs
             </div>

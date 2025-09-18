@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AudioProvider } from "../context/AudioContext";
 import { FavoritesProvider } from "../context/FavoritesContext";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,11 +65,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black text-cyan-400 overflow-x-hidden`}
       >
-        <AudioProvider>
-          <FavoritesProvider>
-            {children}
-          </FavoritesProvider>
-        </AudioProvider>
+        <ErrorBoundary>
+          <AudioProvider>
+            <FavoritesProvider>
+              {children}
+            </FavoritesProvider>
+          </AudioProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

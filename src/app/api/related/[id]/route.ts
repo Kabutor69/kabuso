@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import YouTube from 'youtube-sr';
+import { youtubeService } from '@/lib/youtube';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -19,32 +19,14 @@ export async function GET(
   try {
     const query = q || 'music';
 
-    const results = await YouTube.search(query, {
-      type: 'video',
-      limit: 60,
-    });
+    const tracks = await youtubeService.getRelatedMusic(query);
 
-    const seen = new Set<string>([videoId]);
-    const tracks = results
-      .filter(video => !!video.id)
-      .map(video => ({
-        videoId: video.id!,
-        title: video.title || 'Unknown Title',
-        artists: video.channel?.name || 'Unknown Artist',
-        duration: Math.floor((video.duration || 0) / 1000),
-        views: video.views || 0,
-        thumbnail: video.thumbnail?.url || '',
-      }))
-      .filter(t => t.duration >= 30)
-      .filter(t => !/shorts/i.test(t.title))
-      .filter(t => {
-        if (seen.has(t.videoId)) return false;
-        seen.add(t.videoId);
-        return true;
-      })
+    // Filter out the current video from results
+    const filteredTracks = tracks
+      .filter(track => track.videoId !== videoId)
       .slice(0, 15);
 
-    return NextResponse.json({ tracks });
+    return NextResponse.json({ tracks: filteredTracks });
 
   } catch (error) {
     console.error('Related songs error:', error);
