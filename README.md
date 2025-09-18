@@ -1,4 +1,4 @@
-# 🎵 Kabuso
+# 🎵 Kabuso 
 
 > **Free Music Streaming Platform** - Stream millions of songs without subscriptions or ads
 
